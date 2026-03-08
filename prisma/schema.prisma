@@ -1,0 +1,390 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model attributes {
+  attribute_id             Int                        @id @default(autoincrement())
+  name                     String                     @db.VarChar(100)
+  data_type                String?                    @db.VarChar(20)
+  product_attribute_values product_attribute_values[]
+}
+
+model brands {
+  brand_id    Int        @id @default(autoincrement())
+  name        String     @db.VarChar(100)
+  slug        String     @unique @db.VarChar(150)
+  description String?
+  logo_url    String?
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  deleted_at  DateTime?  @db.Timestamp(6)
+  products    products[]
+
+  @@index([deleted_at], map: "idx_brands_deleted", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cart_items {
+  id               Int               @id @default(autoincrement())
+  cart_id          Int?
+  variant_id       Int?
+  quantity         Int
+  carts            carts?            @relation(fields: [cart_id], references: [cart_id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([cart_id, variant_id])
+}
+
+model carts {
+  cart_id    Int          @id @default(autoincrement())
+  user_id    Int?         @unique
+  created_at DateTime?    @default(now()) @db.Timestamp(6)
+  cart_items cart_items[]
+  users      users?       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_cart_user")
+}
+
+model categories {
+  category_id      Int          @id @default(autoincrement())
+  name             String       @db.VarChar(100)
+  slug             String       @unique @db.VarChar(150)
+  parent_id        Int?
+  image_url        String?
+  is_visible       Boolean?     @default(true)
+  created_at       DateTime?    @default(now()) @db.Timestamp(6)
+  deleted_at       DateTime?    @db.Timestamp(6)
+  categories       categories?  @relation("categoriesTocategories", fields: [parent_id], references: [category_id], onUpdate: NoAction)
+  other_categories categories[] @relation("categoriesTocategories")
+  products         products[]
+
+  @@index([deleted_at], map: "idx_categories_deleted", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model contacts {
+  contact_id                       Int       @id @default(autoincrement())
+  user_id                          Int?
+  full_name                        String    @db.VarChar(150)
+  email                            String    @db.VarChar(150)
+  phone                            String?   @db.VarChar(20)
+  subject                          String    @db.VarChar(255)
+  message                          String
+  status                           String?   @default("pending") @db.VarChar(20)
+  replied_by                       Int?
+  replied_at                       DateTime? @db.Timestamp(6)
+  reply                            String?
+  created_at                       DateTime? @default(now()) @db.Timestamp(6)
+  users_contacts_replied_byTousers users?    @relation("contacts_replied_byTousers", fields: [replied_by], references: [user_id], onUpdate: NoAction)
+  users_contacts_user_idTousers    users?    @relation("contacts_user_idTousers", fields: [user_id], references: [user_id], onUpdate: NoAction)
+
+  @@index([email], map: "idx_contacts_email")
+  @@index([status], map: "idx_contacts_status")
+  @@index([user_id], map: "idx_contacts_user")
+}
+
+model coupon_usages {
+  usage_id  Int       @id @default(autoincrement())
+  user_id   Int?
+  coupon_id Int?
+  order_id  Int?
+  used_at   DateTime? @default(now()) @db.Timestamp(6)
+  coupons   coupons?  @relation(fields: [coupon_id], references: [coupon_id], onDelete: Cascade, onUpdate: NoAction)
+  orders    orders?   @relation(fields: [order_id], references: [order_id], onUpdate: NoAction)
+  users     users?    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, coupon_id, order_id])
+  @@index([user_id, coupon_id], map: "idx_coupon_usages_user_coup")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model coupons {
+  coupon_id           Int             @id @default(autoincrement())
+  code                String          @unique @db.VarChar(50)
+  discount_type       String?         @db.VarChar(20)
+  discount_value      Decimal?        @db.Decimal(10, 2)
+  min_order_amount    Decimal?        @default(0) @db.Decimal(12, 2)
+  max_discount_amount Decimal?        @db.Decimal(12, 2)
+  expiry_date         DateTime?       @db.Date
+  usage_limit         Int?
+  used_count          Int?            @default(0)
+  per_user_limit      Int?            @default(1)
+  is_active           Boolean?        @default(true)
+  created_at          DateTime?       @default(now()) @db.Timestamp(6)
+  deleted_at          DateTime?       @db.Timestamp(6)
+  coupon_usages       coupon_usages[]
+  orders              orders[]
+
+  @@index([deleted_at], map: "idx_coupons_deleted", where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model inventory {
+  inventory_id     Int               @id @default(autoincrement())
+  variant_id       Int?              @unique
+  quantity         Int               @default(0)
+  updated_at       DateTime?         @default(now()) @db.Timestamp(6)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([variant_id], map: "idx_inventory_variant")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model inventory_transactions {
+  transaction_id   Int               @id @default(autoincrement())
+  variant_id       Int?
+  change_quantity  Int
+  transaction_type String?           @db.VarChar(20)
+  reference_id     Int?
+  note             String?
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model order_details {
+  order_detail_id  Int               @id @default(autoincrement())
+  order_id         Int?
+  variant_id       Int?
+  product_name     String            @db.VarChar(255)
+  variant_info     String?
+  sku              String            @db.VarChar(50)
+  price            Decimal           @db.Decimal(12, 2)
+  quantity         Int
+  orders           orders?           @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: Restrict, onUpdate: NoAction)
+}
+
+model order_status {
+  status_id            Int                    @id @default(autoincrement())
+  name                 String                 @unique @db.VarChar(50)
+  order_status_history order_status_history[]
+  orders               orders[]
+}
+
+model order_status_history {
+  history_id   Int           @id @default(autoincrement())
+  order_id     Int?
+  status_id    Int?
+  changed_at   DateTime?     @default(now()) @db.Timestamp(6)
+  note         String?
+  orders       orders?       @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: NoAction)
+  order_status order_status? @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders {
+  order_id             Int                    @id @default(autoincrement())
+  order_code           String                 @unique @db.VarChar(50)
+  user_id              Int?
+  total_amount         Decimal                @db.Decimal(12, 2)
+  discount_amount      Decimal?               @default(0) @db.Decimal(12, 2)
+  shipping_fee         Decimal?               @default(0) @db.Decimal(12, 2)
+  final_amount         Decimal                @db.Decimal(12, 2)
+  status_id            Int?
+  coupon_id            Int?
+  shipping_address     String
+  shipping_method      String?                @db.VarChar(50)
+  payment_method       String?                @db.VarChar(50)
+  payment_status       String?                @default("pending") @db.VarChar(20)
+  note                 String?
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  coupon_usages        coupon_usages[]
+  order_details        order_details[]
+  order_status_history order_status_history[]
+  coupons              coupons?               @relation(fields: [coupon_id], references: [coupon_id], onDelete: NoAction, onUpdate: NoAction)
+  order_status         order_status?          @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+  users                users?                 @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  reviews              reviews[]
+
+  @@index([order_code], map: "idx_orders_code")
+  @@index([status_id], map: "idx_orders_status")
+  @@index([user_id], map: "idx_orders_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model posts {
+  post_id      Int       @id @default(autoincrement())
+  user_id      Int?
+  title        String    @db.VarChar(255)
+  slug         String    @unique @db.VarChar(255)
+  thumbnail    String?
+  content      String
+  excerpt      String?
+  category     String?   @default("news") @db.VarChar(50)
+  is_published Boolean?  @default(false)
+  published_at DateTime? @db.Timestamp(6)
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at   DateTime? @db.Timestamp(6)
+  users        users?    @relation(fields: [user_id], references: [user_id], onUpdate: NoAction)
+
+  @@index([deleted_at], map: "idx_posts_deleted", where: raw("(deleted_at IS NULL)"))
+  @@index([is_published, published_at(sort: Desc)], map: "idx_posts_published", where: raw("(deleted_at IS NULL)"))
+  @@index([slug], map: "idx_posts_slug")
+  @@index([user_id], map: "idx_posts_user")
+}
+
+model product_attribute_values {
+  id               Int               @id @default(autoincrement())
+  variant_id       Int?
+  attribute_id     Int?
+  value            String
+  attributes       attributes?       @relation(fields: [attribute_id], references: [attribute_id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([variant_id, attribute_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model product_images {
+  image_id         Int               @id @default(autoincrement())
+  product_id       Int?
+  variant_id       Int?
+  image_url        String
+  alt_text         String?           @db.VarChar(255)
+  is_main          Boolean?          @default(false)
+  sort_order       Int?              @default(0)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  products         products?         @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_product_images_product")
+  @@index([variant_id], map: "idx_product_images_variant")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model product_variants {
+  variant_id               Int                        @id @default(autoincrement())
+  product_id               Int?                       @unique(map: "uniq_default_variant_per_product", where: raw("((is_default = true) AND (deleted_at IS NULL))"))
+  sku                      String                     @unique @db.VarChar(50)
+  price                    Decimal                    @db.Decimal(12, 2)
+  compare_price            Decimal?                   @db.Decimal(12, 2)
+  image_url                String?
+  is_active                Boolean?                   @default(true)
+  is_default               Boolean?                   @default(false)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  deleted_at               DateTime?                  @db.Timestamp(6)
+  cart_items               cart_items[]
+  inventory                inventory?
+  inventory_transactions   inventory_transactions[]
+  order_details            order_details[]
+  product_attribute_values product_attribute_values[]
+  product_images           product_images[]
+  products                 products?                  @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction)
+  wishlists                wishlists[]
+
+  @@index([is_default], map: "idx_variants_default", where: raw("(is_default = true)"))
+  @@index([deleted_at], map: "idx_variants_deleted", where: raw("(deleted_at IS NULL)"))
+  @@index([product_id], map: "idx_variants_product")
+}
+
+model products {
+  product_id       Int               @id @default(autoincrement())
+  name             String            @db.VarChar(255)
+  slug             String            @unique @db.VarChar(255)
+  description      String?
+  category_id      Int?
+  brand_id         Int?
+  is_active        Boolean?          @default(true)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  deleted_at       DateTime?         @db.Timestamp(6)
+  product_images   product_images[]
+  product_variants product_variants?
+  brands           brands?           @relation(fields: [brand_id], references: [brand_id], onDelete: NoAction, onUpdate: NoAction)
+  categories       categories?       @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
+  reviews          reviews[]
+  wishlists        wishlists[]
+
+  @@index([brand_id], map: "idx_products_brand")
+  @@index([category_id], map: "idx_products_category")
+  @@index([deleted_at], map: "idx_products_deleted", where: raw("(deleted_at IS NULL)"))
+}
+
+model review_images {
+  image_id   Int       @id @default(autoincrement())
+  review_id  Int?
+  image_url  String
+  alt_text   String?   @db.VarChar(255)
+  sort_order Int?      @default(0)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  reviews    reviews?  @relation(fields: [review_id], references: [review_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([review_id], map: "idx_review_images_review")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reviews {
+  review_id     Int             @id @default(autoincrement())
+  product_id    Int?
+  user_id       Int?
+  order_id      Int?
+  rating        Int?
+  comment       String?
+  is_approved   Boolean?        @default(false)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  deleted_at    DateTime?       @db.Timestamp(6)
+  review_images review_images[]
+  orders        orders?         @relation(fields: [order_id], references: [order_id], onUpdate: NoAction)
+  products      products?       @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction)
+  users         users?          @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([product_id, user_id])
+  @@index([deleted_at], map: "idx_reviews_deleted", where: raw("(deleted_at IS NULL)"))
+  @@index([product_id], map: "idx_reviews_product")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  user_id                             Int             @id @default(autoincrement())
+  full_name                           String          @db.VarChar(150)
+  email                               String          @unique @db.VarChar(150)
+  password_hash                       String
+  phone                               String?         @db.VarChar(20)
+  address                             String?
+  avatar_url                          String?
+  date_of_birth                       DateTime?       @db.Date
+  is_verified                         Boolean?        @default(false)
+  role                                String?         @default("user") @db.VarChar(20)
+  last_login                          DateTime?       @db.Timestamp(6)
+  created_at                          DateTime?       @default(now()) @db.Timestamp(6)
+  deleted_at                          DateTime?       @db.Timestamp(6)
+  carts                               carts?
+  contacts_contacts_replied_byTousers contacts[]      @relation("contacts_replied_byTousers")
+  contacts_contacts_user_idTousers    contacts[]      @relation("contacts_user_idTousers")
+  coupon_usages                       coupon_usages[]
+  orders                              orders[]
+  posts                               posts[]
+  reviews                             reviews[]
+  wishlists                           wishlists[]
+
+  @@index([deleted_at], map: "idx_users_deleted", where: raw("(deleted_at IS NULL)"))
+  @@index([email], map: "idx_users_email")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model wishlists {
+  wishlist_id      Int               @id @default(autoincrement())
+  user_id          Int?
+  product_id       Int?
+  variant_id       Int?
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  products         products?         @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction)
+  users            users?            @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants product_variants? @relation(fields: [variant_id], references: [variant_id], onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_wishlists_user")
+}
+
+model email_subscribers {
+  subscriber_id   Int       @id @default(autoincrement())
+  email           String    @unique @db.VarChar(150)
+  is_active       Boolean?  @default(true)
+  subscribed_at   DateTime? @default(now()) @db.Timestamp(6)
+  unsubscribed_at DateTime? @db.Timestamp(6)
+}

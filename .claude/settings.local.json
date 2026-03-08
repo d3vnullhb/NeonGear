@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(curl:*)",
+      "Bash(npm create:*)",
+      "Bash(npx prisma:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(netstat:*)",
+      "Bash(sed:*)"
+    ]
+  }
+}
