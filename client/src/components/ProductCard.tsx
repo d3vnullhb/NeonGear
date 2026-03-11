@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingCart, Heart } from 'lucide-react'
 import type { Product } from '../types'
 import { useCart } from '../context/CartContext'
@@ -13,6 +13,7 @@ export default function ProductCard({ product }: Props) {
   const { addItem } = useCart()
   const { isAuthenticated } = useAuth()
   const { isWishlisted, toggle } = useWishlist()
+  const navigate = useNavigate()
 
   const variant = Array.isArray(product.product_variants)
     ? product.product_variants.find((v) => v.is_default) ?? product.product_variants[0]
@@ -26,9 +27,17 @@ export default function ProductCard({ product }: Props) {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
-    if (!isAuthenticated || !variant) return
+    if (!isAuthenticated) { navigate('/login'); return }
+    if (!variant) return
     try {
-      await addItem(variant.variant_id, 1)
+      const variantName = variant.product_attribute_values?.map((a) => a.value).join(' / ')
+      await addItem(variant.variant_id, 1, {
+        name: product.name,
+        image_url: mainImage?.image_url ?? variant.image_url,
+        price: variant.price,
+        variant_name: variantName,
+        slug: product.slug,
+      })
     } catch {
       // silent
     }
@@ -36,7 +45,7 @@ export default function ProductCard({ product }: Props) {
 
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault()
-    if (!isAuthenticated) return
+    if (!isAuthenticated) { navigate('/login'); return }
     try {
       await toggle(product.product_id, variant?.variant_id)
     } catch {
@@ -86,11 +95,11 @@ export default function ProductCard({ product }: Props) {
 
       {/* Info */}
       <div className="p-4">
-        {product.brands && <p className="text-xs mb-1" style={{ color: 'var(--neon-blue)' }}>{product.brands.name}</p>}
-        <h3 className="font-semibold text-sm mb-2 line-clamp-2 leading-snug">{product.name}</h3>
+        {product.brands && <p className="text-xs font-medium mb-1" style={{ color: 'var(--neon-blue)', letterSpacing: '0.02em' }}>{product.brands.name}</p>}
+        <h3 className="font-semibold text-[15px] mb-2.5 line-clamp-2 leading-snug">{product.name}</h3>
 
-        <div className="flex items-center gap-2 mb-3">
-          <span className="font-bold neon-text">{price.toLocaleString('vi-VN')}₫</span>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="font-bold text-base neon-text">{price.toLocaleString('vi-VN')}₫</span>
           {comparePrice && comparePrice > price && (
             <span className="text-xs line-through" style={{ color: 'var(--muted)' }}>{comparePrice.toLocaleString('vi-VN')}₫</span>
           )}
@@ -98,8 +107,9 @@ export default function ProductCard({ product }: Props) {
 
         <button
           onClick={handleAddToCart}
-          disabled={!inStock || !isAuthenticated}
-          className="btn-primary w-full flex items-center justify-center gap-2 text-sm py-2"
+          disabled={!inStock}
+          className="btn-primary w-full flex items-center justify-center gap-2 py-2.5"
+          style={{ fontSize: 13 }}
         >
           <ShoppingCart size={14} />
           {inStock ? 'Thêm vào giỏ' : 'Hết hàng'}

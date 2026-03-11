@@ -8,20 +8,27 @@ import UserLayout from './layouts/UserLayout'
 import AdminLayout from './layouts/AdminLayout'
 import { RequireAuth, RequireAdmin, RequireGuest } from './components/ProtectedRoute'
 
-import Home from './pages/Home'
-import Products from './pages/Products'
-import ProductDetail from './pages/ProductDetail'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Cart from './pages/Cart'
-import Checkout from './pages/Checkout'
-import Orders from './pages/Orders'
-import OrderDetail from './pages/OrderDetail'
-import Profile from './pages/Profile'
-import Wishlist from './pages/Wishlist'
-import Posts from './pages/Posts'
-import PostDetail from './pages/PostDetail'
-import Contact from './pages/Contact'
+import Home from './pages/user/Home'
+import Products from './pages/user/Products'
+import ProductDetail from './pages/user/ProductDetail'
+import Login from './pages/user/Login'
+import Register from './pages/user/Register'
+import Cart from './pages/user/Cart'
+import Checkout from './pages/user/Checkout'
+import Orders from './pages/user/Orders'
+import OrderDetail from './pages/user/OrderDetail'
+import Profile from './pages/user/Profile'
+import Wishlist from './pages/user/Wishlist'
+import Posts from './pages/user/Posts'
+import PostDetail from './pages/user/PostDetail'
+import Contact from './pages/user/Contact'
+import ForgotPassword from './pages/user/ForgotPassword'
+import ResetPassword from './pages/user/ResetPassword'
+import PrivacyPolicy from './pages/user/PrivacyPolicy'
+import ReturnPolicy from './pages/user/ReturnPolicy'
+import ShippingPolicy from './pages/user/ShippingPolicy'
+import PaymentResult from './pages/user/PaymentResult'
+import NotFound from './pages/NotFound'
 
 import Dashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/AdminProducts'
@@ -36,10 +43,12 @@ import AdminPosts from './pages/admin/AdminPosts'
 import AdminContacts from './pages/admin/AdminContacts'
 import AdminInventory from './pages/admin/AdminInventory'
 import AdminAttributes from './pages/admin/AdminAttributes'
+import AdminSubscribers from './pages/admin/AdminSubscribers'
 
-export default function App() {
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
+
+function AppRoutes() {
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''}>
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
@@ -60,15 +69,26 @@ export default function App() {
                 <Route path="/register" element={<Register />} />
               </Route>
 
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/chinh-sach/bao-mat" element={<PrivacyPolicy />} />
+              <Route path="/chinh-sach/doi-tra-hoan-tien" element={<ReturnPolicy />} />
+              <Route path="/chinh-sach/thanh-toan-van-chuyen" element={<ShippingPolicy />} />
+              <Route path="/payment/result" element={<PaymentResult />} />
+
               {/* Auth required */}
               <Route element={<RequireAuth />}>
                 <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/orders/:id" element={<OrderDetail />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/wishlist" element={<Wishlist />} />
               </Route>
+            </Route>
+
+            {/* Standalone Checkout — no Navbar/Footer */}
+            <Route element={<RequireAuth />}>
+              <Route path="/checkout" element={<Checkout />} />
             </Route>
 
             {/* Admin layout */}
@@ -87,13 +107,22 @@ export default function App() {
                 <Route path="/admin/contacts" element={<AdminContacts />} />
                 <Route path="/admin/inventory" element={<AdminInventory />} />
                 <Route path="/admin/attributes" element={<AdminAttributes />} />
+                <Route path="/admin/subscribers" element={<AdminSubscribers />} />
               </Route>
             </Route>
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </WishlistProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
-    </GoogleOAuthProvider>
   )
+}
+
+export default function App() {
+  if (googleClientId) {
+    return <GoogleOAuthProvider clientId={googleClientId}><AppRoutes /></GoogleOAuthProvider>
+  }
+  return <AppRoutes />
 }

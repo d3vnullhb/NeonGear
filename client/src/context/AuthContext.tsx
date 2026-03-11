@@ -5,7 +5,7 @@ import api from '../lib/api'
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>
   register: (full_name: string, email: string, password: string, phone?: string) => Promise<void>
   loginWithGoogle: (access_token: string) => Promise<void>
   loginWithFacebook: (access_token: string) => Promise<void>
@@ -19,17 +19,20 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('user')
+    const stored = localStorage.getItem('user') || sessionStorage.getItem('user')
     return stored ? JSON.parse(stored) : null
   })
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(
+    () => localStorage.getItem('token') || sessionStorage.getItem('token')
+  )
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe = true) => {
     const { data } = await api.post('/auth/login', { email, password })
+    const storage = rememberMe ? localStorage : sessionStorage
     setToken(data.data.token)
     setUser(data.data.user)
-    localStorage.setItem('token', data.data.token)
-    localStorage.setItem('user', JSON.stringify(data.data.user))
+    storage.setItem('token', data.data.token)
+    storage.setItem('user', JSON.stringify(data.data.user))
   }
 
   const register = async (full_name: string, email: string, password: string, phone?: string) => {
@@ -56,11 +59,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null)
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
   }
 
   const updateUser = (user: User) => {
     setUser(user)
-    localStorage.setItem('user', JSON.stringify(user))
+    if (localStorage.getItem('token')) localStorage.setItem('user', JSON.stringify(user))
+    if (sessionStorage.getItem('token')) sessionStorage.setItem('user', JSON.stringify(user))
   }
 
   return (

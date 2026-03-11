@@ -11,7 +11,16 @@
       "Bash(node:*)",
       "Bash(npx tsx:*)",
       "Bash(netstat:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(ls not:*)",
+      "Bash(echo \"exit: $?\")",
+      "Read(//c/Users/AD/Downloads/**)",
+      "Bash(cp \"/c/Users/AD/Downloads/payment_method.png\" \"/c/Users/AD/Desktop/neongear/client/public/images/payment-methods.png\")",
+      "Bash(cp \"/c/Users/AD/Downloads/bocongthuong.png\" \"/c/Users/AD/Desktop/neongear/client/public/images/bct-badge.png\")",
+      "Bash(npx dotenv -e .env -- npx tsx -e \":*)"
     ]
   }
 }

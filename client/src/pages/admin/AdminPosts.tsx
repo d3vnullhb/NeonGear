@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Edit } from 'lucide-react'
+import { Plus, Trash2, Edit, Image, FileText } from 'lucide-react'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
+
+const CATEGORY_LABELS: Record<string, string> = { news: 'Tin tức', review: 'Đánh giá', guide: 'Hướng dẫn', event: 'Sự kiện' }
+const CATEGORY_COLORS: Record<string, string> = { news: 'var(--neon-blue)', review: 'var(--warning)', guide: 'var(--success)', event: 'var(--neon-cyan)' }
 
 export default function AdminPosts() {
   const [posts, setPosts] = useState<any[]>([])
@@ -9,6 +12,7 @@ export default function AdminPosts() {
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ title: '', slug: '', content: '', excerpt: '', category: 'news', is_published: false })
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
 
   const fetchPosts = () => {
@@ -23,16 +27,18 @@ export default function AdminPosts() {
     setForm((f) => ({ ...f, title, slug }))
   }
 
-  const openCreate = () => { setEditing(null); setForm({ title: '', slug: '', content: '', excerpt: '', category: 'news', is_published: false }); setModal('create') }
-  const openEdit = (p: any) => { setEditing(p); setForm({ title: p.title, slug: p.slug, content: p.content ?? '', excerpt: p.excerpt ?? '', category: p.category ?? 'news', is_published: p.is_published ?? false }); setModal('edit') }
+  const openCreate = () => { setEditing(null); setForm({ title: '', slug: '', content: '', excerpt: '', category: 'news', is_published: false }); setImageFile(null); setModal('create') }
+  const openEdit = (p: any) => { setEditing(p); setForm({ title: p.title, slug: p.slug, content: p.content ?? '', excerpt: p.excerpt ?? '', category: p.category ?? 'news', is_published: p.is_published ?? false }); setImageFile(null); setModal('edit') }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      if (modal === 'create') await api.post('/admin/posts', form)
-      else await api.put(`/admin/posts/${editing.post_id}`, form)
-      setModal(null)
-      fetchPosts()
+      const fd = new FormData()
+      Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
+      if (imageFile) fd.append('thumbnail', imageFile)
+      if (modal === 'create') await api.post('/admin/posts', fd)
+      else await api.put(`/admin/posts/${editing.post_id}`, fd)
+      setModal(null); setImageFile(null); fetchPosts()
     } catch (err: any) {
       alert(err.response?.data?.message ?? 'Thất bại')
     } finally {
@@ -48,66 +54,129 @@ export default function AdminPosts() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">Bài viết</h1>
-        <button onClick={openCreate} className="btn-primary flex items-center gap-2 py-2 px-4 text-sm"><Plus size={16} /> Thêm</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Space Grotesk' }}>Bài viết</h1>
+          <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>Quản lý nội dung tin tức, hướng dẫn và sự kiện</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13 }}>
+          <Plus size={15} /> Thêm bài viết
+        </button>
       </div>
 
-      {loading ? <div className="flex justify-center py-20"><Spinner size={40} /></div> : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
-                {['Tiêu đề', 'Danh mục', 'Trạng thái', 'Ngày tạo', ''].map((h) => <th key={h} className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--muted)' }}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map((p) => (
-                <tr key={p.post_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3 font-medium">{p.title}</td>
-                  <td className="px-4 py-3"><span className="badge text-xs">{p.category}</span></td>
-                  <td className="px-4 py-3"><span style={{ color: p.is_published ? 'var(--success)' : 'var(--warning)' }}>{p.is_published ? 'Đã đăng' : 'Nháp'}</span></td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--muted)' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : ''}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => openEdit(p)} style={{ background: 'none', border: 'none', color: 'var(--neon-blue)', cursor: 'pointer' }}><Edit size={14} /></button>
-                      <button onClick={() => handleDelete(p.post_id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Spinner size={40} /></div>
+      ) : (
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+                  {['Bài viết', 'Danh mục', 'Trạng thái', 'Ngày tạo', ''].map((h) => (
+                    <th key={h} style={{ textAlign: 'left', padding: '11px 16px', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {posts.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--muted)' }}>
+                    <FileText size={32} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.3 }} />
+                    Chưa có bài viết nào
+                  </td></tr>
+                )}
+                {posts.map((p) => (
+                  <tr key={p.post_id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 150ms' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(0,180,255,0.03)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent' }}
+                  >
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {p.thumbnail
+                          ? <img src={p.thumbnail} style={{ width: 52, height: 36, borderRadius: 6, objectFit: 'cover', border: '1px solid var(--border)', flexShrink: 0 }} />
+                          : <div style={{ width: 52, height: 36, borderRadius: 6, background: 'var(--surface-raised)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--muted)' }}><Image size={16} /></div>
+                        }
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{p.title}</div>
+                          {p.excerpt && <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280, marginTop: 2 }}>{p.excerpt}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 6, fontWeight: 600, background: `${CATEGORY_COLORS[p.category] ?? 'var(--muted)'}18`, color: CATEGORY_COLORS[p.category] ?? 'var(--muted)', border: `1px solid ${CATEGORY_COLORS[p.category] ?? 'var(--border)'}30` }}>
+                        {CATEGORY_LABELS[p.category] ?? p.category}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: p.is_published ? 'rgba(0,255,157,0.1)' : 'rgba(255,184,0,0.1)', color: p.is_published ? 'var(--success)' : 'var(--warning)', border: `1px solid ${p.is_published ? 'rgba(0,255,157,0.25)' : 'rgba(255,184,0,0.25)'}` }}>
+                        {p.is_published ? 'Đã đăng' : 'Nháp'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 12.5 }}>
+                      {p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : ''}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEdit(p)} style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(0,180,255,0.1)', border: '1px solid rgba(0,180,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--neon-blue)', cursor: 'pointer' }}><Edit size={13} /></button>
+                        <button onClick={() => handleDelete(p.post_id)} style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }}>
-          <div className="card p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="font-bold text-lg mb-4">{modal === 'create' ? 'Thêm bài viết' : 'Sửa bài viết'}</h2>
-            <div className="space-y-3">
-              <div><label className="block text-sm font-medium mb-1">Tiêu đề *</label><input value={form.title} onChange={(e) => setSlug(e.target.value)} className="input-inset text-sm" /></div>
-              <div><label className="block text-sm font-medium mb-1">Slug *</label><input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset text-sm" /></div>
-              <div className="grid grid-cols-2 gap-3">
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="card" style={{ padding: 0, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+              <h2 style={{ fontWeight: 700, fontSize: 16, fontFamily: 'Space Grotesk' }}>{modal === 'create' ? 'Thêm bài viết mới' : 'Chỉnh sửa bài viết'}</h2>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Tiêu đề *</label>
+                <input value={form.title} onChange={(e) => setSlug(e.target.value)} className="input-inset" style={{ fontSize: 13 }} autoFocus />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Slug *</label>
+                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Danh mục</label>
-                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-inset text-sm">
-                    {['news', 'review', 'guide', 'event'].map((c) => <option key={c} value={c}>{c}</option>)}
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Danh mục</label>
+                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-inset" style={{ fontSize: 13 }}>
+                    {(['news', 'review', 'guide', 'event'] as const).map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
                   </select>
                 </div>
-                <div className="flex items-center gap-2 self-end pb-1">
-                  <input type="checkbox" id="pub" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} style={{ accentColor: 'var(--neon-blue)' }} />
-                  <label htmlFor="pub" className="text-sm">Xuất bản</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingBottom: 10 }}>
+                  <input type="checkbox" checked={form.is_published} onChange={(e) => setForm({ ...form, is_published: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />
+                  <span style={{ fontSize: 13 }}>Xuất bản</span>
+                </label>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Tóm tắt</label>
+                <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} className="input-inset" style={{ fontSize: 13 }} rows={2} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Nội dung *</label>
+                <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="input-inset" style={{ fontSize: 13 }} rows={8} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Ảnh thumbnail</label>
+                <div style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: '12px 14px', background: 'rgba(0,0,0,0.2)' }}>
+                  <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} style={{ fontSize: 12.5, color: 'var(--muted)', width: '100%' }} />
+                  {editing?.thumbnail && !imageFile && (
+                    <img src={editing.thumbnail} style={{ width: 96, height: 64, borderRadius: 6, objectFit: 'cover', marginTop: 10, border: '1px solid var(--border)' }} />
+                  )}
+                  {imageFile && <p style={{ fontSize: 12, marginTop: 8, color: 'var(--success)' }}>✓ {imageFile.name}</p>}
                 </div>
               </div>
-              <div><label className="block text-sm font-medium mb-1">Tóm tắt</label><textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} className="input-inset text-sm" rows={2} /></div>
-              <div><label className="block text-sm font-medium mb-1">Nội dung *</label><textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="input-inset text-sm" rows={8} /></div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">{saving ? 'Đang lưu...' : 'Lưu'}</button>
-              <button onClick={() => setModal(null)} className="btn-ghost flex-1">Huỷ</button>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
+              <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ flex: 1, padding: '10px', fontSize: 13 }}>{saving ? 'Đang lưu...' : 'Lưu bài viết'}</button>
+              <button onClick={() => setModal(null)} className="btn-ghost" style={{ flex: 1, padding: '10px', fontSize: 13 }}>Huỷ</button>
             </div>
           </div>
         </div>

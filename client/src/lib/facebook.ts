@@ -6,6 +6,8 @@ declare global {
 }
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID ?? ''
+// App ID phải là chuỗi số (numeric) — nếu vẫn là placeholder thì bỏ qua
+export const FB_ENABLED = /^\d+$/.test(FB_APP_ID)
 
 let sdkReady = false
 let sdkLoading = false

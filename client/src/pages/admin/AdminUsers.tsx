@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Search } from 'lucide-react'
+import { Trash2, Search, Users } from 'lucide-react'
 import api from '../../lib/api'
 import type { User, Pagination } from '../../types'
 import Spinner from '../../components/Spinner'
@@ -24,9 +24,7 @@ export default function AdminUsers() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setPage(1)
-    setQuery(search)
-    fetchUsers(1, search)
+    setPage(1); setQuery(search); fetchUsers(1, search)
   }
 
   const handleDelete = async (id: number) => {
@@ -42,40 +40,67 @@ export default function AdminUsers() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold">Người dùng</h1>
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm kiếm..." className="input-inset text-sm w-48" />
-          <button type="submit" className="btn-ghost py-2 px-3"><Search size={16} /></button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Space Grotesk' }}>Người dùng</h1>
+          <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>Quản lý tài khoản và phân quyền người dùng</p>
+        </div>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--surface-raised)', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
+          <Search size={14} style={{ color: 'var(--muted)' }} />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm người dùng..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text)', width: 200 }} />
+          <button type="submit" style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: 'rgba(0,180,255,0.15)', border: '1px solid rgba(0,180,255,0.3)', color: 'var(--neon-blue)', cursor: 'pointer' }}>Tìm</button>
         </form>
       </div>
 
-      {loading ? <div className="flex justify-center py-20"><Spinner size={40} /></div> : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}><Spinner size={40} /></div>
+      ) : (
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
-                  {['ID', 'Họ tên', 'Email', 'Vai trò', 'Ngày tạo', ''].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--muted)' }}>{h}</th>
+                  {['Người dùng', 'Email', 'Vai trò', 'Ngày tạo', ''].map((h) => (
+                    <th key={h} style={{ textAlign: 'left', padding: '11px 16px', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+                {users.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--muted)' }}>
+                    <Users size={32} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.3 }} />
+                    Không tìm thấy người dùng
+                  </td></tr>
+                )}
                 {users.map((u) => (
-                  <tr key={u.user_id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>#{u.user_id}</td>
-                    <td className="px-4 py-3 font-medium">{u.full_name}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--muted)' }}>{u.email}</td>
-                    <td className="px-4 py-3">
-                      <select value={u.role} onChange={(e) => handleRoleChange(u.user_id, e.target.value)} className="text-xs py-1 px-2 rounded" style={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: u.role === 'admin' ? 'var(--neon-blue)' : 'var(--text)', cursor: 'pointer' }}>
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
+                  <tr key={u.user_id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 150ms' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(0,180,255,0.03)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent' }}
+                  >
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: u.role === 'admin' ? 'rgba(0,180,255,0.2)' : 'rgba(107,107,138,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: u.role === 'admin' ? 'var(--neon-blue)' : 'var(--muted)', flexShrink: 0 }}>
+                          {u.full_name?.[0]?.toUpperCase() ?? '?'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{u.full_name}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>#{u.user_id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 13 }}>{u.email}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <select value={u.role} onChange={(e) => handleRoleChange(u.user_id, e.target.value)}
+                        style={{ fontSize: 12, padding: '5px 10px', borderRadius: 20, background: u.role === 'admin' ? 'rgba(0,180,255,0.12)' : 'rgba(107,107,138,0.1)', border: u.role === 'admin' ? '1px solid rgba(0,180,255,0.3)' : '1px solid var(--border)', color: u.role === 'admin' ? 'var(--neon-blue)' : 'var(--text)', cursor: 'pointer', fontWeight: 600, outline: 'none' }}>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--muted)' }}>{u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : ''}</td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => handleDelete(u.user_id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 12.5 }}>
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : ''}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button onClick={() => handleDelete(u.user_id)} title="Xoá" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
                     </td>
                   </tr>
                 ))}
@@ -86,9 +111,11 @@ export default function AdminUsers() {
       )}
 
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 16 }}>
           {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
-            <button key={p} onClick={() => setPage(p)} className={p === page ? 'btn-primary py-1 px-3 text-sm' : 'btn-ghost py-1 px-3 text-sm'}>{p}</button>
+            <button key={p} onClick={() => setPage(p)}
+              style={{ width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: p === page ? 700 : 400, background: p === page ? 'var(--neon-blue)' : 'var(--surface-raised)', color: p === page ? '#000' : 'var(--text)', transition: 'all 150ms' }}
+            >{p}</button>
           ))}
         </div>
       )}

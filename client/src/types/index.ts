@@ -95,11 +95,20 @@ export interface WishlistItem {
 
 export interface OrderDetail {
   order_detail_id: number
+  variant_id?: number
   product_name: string
   variant_info?: string
   sku: string
   price: number | string
   quantity: number
+}
+
+export interface OrderStatusHistory {
+  history_id: number
+  status_id: number
+  changed_at: string
+  note?: string
+  order_status?: { name: string }
 }
 
 export interface Order {
@@ -117,6 +126,7 @@ export interface Order {
   created_at?: string
   order_status?: { status_id: number; name: string }
   order_details: OrderDetail[]
+  order_status_history?: OrderStatusHistory[]
 }
 
 export interface Review {

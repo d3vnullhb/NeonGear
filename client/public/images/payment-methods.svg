@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="80" viewBox="0 0 380 80">
+  <!-- VISA -->
+  <rect x="0" y="0" width="60" height="36" rx="5" fill="#1a1f71"/>
+  <text x="30" y="24" text-anchor="middle" fill="#fff" font-size="15" font-family="Arial, sans-serif" font-weight="900" font-style="italic">VISA</text>
+
+  <!-- Mastercard -->
+  <rect x="68" y="0" width="60" height="36" rx="5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="96" cy="18" r="11" fill="#eb001b"/>
+  <circle cx="108" cy="18" r="11" fill="#f79e1b"/>
+  <path d="M102 9.5 a11 11 0 0 1 0 17 a11 11 0 0 1 0-17" fill="#ff5f00"/>
+
+  <!-- JCB -->
+  <rect x="136" y="0" width="60" height="36" rx="5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <rect x="140" y="4" width="16" height="28" rx="3" fill="#003087"/>
+  <rect x="158" y="4" width="16" height="28" rx="3" fill="#cc0000"/>
+  <rect x="176" y="4" width="16" height="28" rx="3" fill="#009f6b"/>
+  <text x="148" y="22" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial" font-weight="bold">J</text>
+  <text x="166" y="22" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial" font-weight="bold">C</text>
+  <text x="184" y="22" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial" font-weight="bold">B</text>
+
+  <!-- MoMo -->
+  <rect x="204" y="0" width="60" height="36" rx="5" fill="#a50064"/>
+  <text x="234" y="22" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial, sans-serif" font-weight="900">MoMo</text>
+
+  <!-- ZaloPay -->
+  <rect x="272" y="0" width="60" height="36" rx="5" fill="#0068ff"/>
+  <text x="302" y="15" text-anchor="middle" fill="#fff" font-size="9" font-family="Arial, sans-serif" font-weight="900">Zalo</text>
+  <text x="302" y="28" text-anchor="middle" fill="#fff" font-size="9" font-family="Arial, sans-serif" font-weight="900">Pay</text>
+
+  <!-- COD -->
+  <rect x="0" y="44" width="60" height="36" rx="5" fill="#2e7d32"/>
+  <text x="30" y="58" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial, sans-serif" font-weight="700">Cash on</text>
+  <text x="30" y="72" text-anchor="middle" fill="#fff" font-size="8" font-family="Arial, sans-serif" font-weight="700">Delivery</text>
+
+  <!-- Napas -->
+  <rect x="68" y="44" width="60" height="36" rx="5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <text x="98" y="67" text-anchor="middle" fill="#0053a0" font-size="12" font-family="Arial, sans-serif" font-weight="900">napas</text>
+
+  <!-- VNPAY -->
+  <rect x="136" y="44" width="60" height="36" rx="5" fill="#e31837"/>
+  <text x="166" y="67" text-anchor="middle" fill="#fff" font-size="12" font-family="Arial, sans-serif" font-weight="900">VNPAY</text>
+
+  <!-- PayPal -->
+  <rect x="204" y="44" width="60" height="36" rx="5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <text x="222" y="61" text-anchor="middle" fill="#003087" font-size="9" font-family="Arial, sans-serif" font-weight="900">Pay</text>
+  <text x="246" y="61" text-anchor="middle" fill="#009cde" font-size="9" font-family="Arial, sans-serif" font-weight="900">Pal</text>
+  <text x="234" y="72" text-anchor="middle" fill="#003087" font-size="7" font-family="Arial, sans-serif">PayPal</text>
+</svg>

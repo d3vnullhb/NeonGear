@@ -3,12 +3,22 @@ import type { Cart } from '../types'
 import api from '../lib/api'
 import { useAuth } from './AuthContext'
 
+export interface JustAddedInfo {
+  name: string
+  image_url?: string
+  price: number | string
+  variant_name?: string
+  slug: string
+}
+
 interface CartContextType {
   cart: Cart | null
   cartCount: number
   loading: boolean
+  justAdded: JustAddedInfo | null
   fetchCart: () => Promise<void>
-  addItem: (variant_id: number, quantity: number) => Promise<void>
+  addItem: (variant_id: number, quantity: number, info?: JustAddedInfo) => Promise<void>
+  dismissCart: () => void
   updateItem: (id: number, quantity: number) => Promise<void>
   removeItem: (id: number) => Promise<void>
   clearCart: () => Promise<void>
@@ -19,6 +29,7 @@ const CartContext = createContext<CartContextType | null>(null)
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(false)
+  const [justAdded, setJustAdded] = useState<JustAddedInfo | null>(null)
   const { isAuthenticated } = useAuth()
 
   const fetchCart = async () => {
@@ -36,10 +47,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { fetchCart() }, [isAuthenticated])
 
-  const addItem = async (variant_id: number, quantity: number) => {
+  const addItem = async (variant_id: number, quantity: number, info?: JustAddedInfo) => {
     await api.post('/cart/items', { variant_id, quantity })
     await fetchCart()
+    if (info) setJustAdded(info)
   }
+
+  const dismissCart = () => setJustAdded(null)
 
   const updateItem = async (id: number, quantity: number) => {
     await api.put(`/cart/items/${id}`, { quantity })
@@ -59,7 +73,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const cartCount = cart?.cart_items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
 
   return (
-    <CartContext.Provider value={{ cart, cartCount, loading, fetchCart, addItem, updateItem, removeItem, clearCart }}>
+    <CartContext.Provider value={{ cart, cartCount, loading, justAdded, fetchCart, addItem, dismissCart, updateItem, removeItem, clearCart }}>
       {children}
     </CartContext.Provider>
   )
