@@ -4,6 +4,7 @@ import {
   getCouponByCode,
   getCouponById,
   listCoupons,
+  listPublicCoupons,
   createCoupon,
   updateCoupon,
   softDeleteCoupon,
@@ -51,6 +52,16 @@ export const validateCoupon = async (req: AuthRequest, res: Response) => {
     }
 
     res.json({ success: true, message: 'Mã giảm giá hợp lệ', data: { coupon, discount_amount: discount } })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+// Public
+export const getPublicCoupons = async (_req: Request, res: Response) => {
+  try {
+    const coupons = await listPublicCoupons()
+    res.json({ success: true, message: 'Lấy coupon thành công', data: coupons })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }

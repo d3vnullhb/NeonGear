@@ -14,6 +14,30 @@ export const listCoupons = (page: number, limit: number) => {
   ])
 }
 
+export const listPublicCoupons = () => {
+  const today = new Date()
+  return prisma.coupons.findMany({
+    where: {
+      deleted_at: null,
+      is_active: true,
+      OR: [{ expiry_date: null }, { expiry_date: { gte: today } }],
+    },
+    orderBy: { created_at: 'desc' },
+    select: {
+      coupon_id: true,
+      code: true,
+      discount_type: true,
+      discount_value: true,
+      min_order_amount: true,
+      max_discount_amount: true,
+      expiry_date: true,
+      usage_limit: true,
+      used_count: true,
+      per_user_limit: true,
+    },
+  })
+}
+
 export const createCoupon = (data: {
   code: string
   discount_type?: string

@@ -85,8 +85,8 @@ export default function Home() {
           {/* Stats */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
             {[
-              { value: '500+', label: 'Sản phẩm' },
-              { value: '10K+', label: 'Khách hàng' },
+              { value: '150+', label: 'Sản phẩm' },
+              { value: '2K+', label: 'Khách hàng' },
               { value: '4.9★', label: 'Đánh giá' },
             ].map((s) => (
               <div key={s.label} className="card-raised" style={{ padding: '16px 20px', textAlign: 'center', minWidth: 100, borderColor: 'rgba(0,180,255,0.15)' }}>
@@ -131,7 +131,7 @@ export default function Home() {
                 Tất cả <ArrowRight size={14} />
               </Link>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
               {categories.slice(0, 6).map((cat) => (
                 <Link
                   key={cat.category_id}

@@ -433,6 +433,7 @@ export default function Checkout() {
               </div>
               {couponError && <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 6 }}>{couponError}</p>}
               {couponInfo && <p style={{ fontSize: 12, color: 'var(--success)', marginTop: 6 }}>✓ Giảm {couponInfo.discount_amount.toLocaleString('vi-VN')}₫</p>}
+              {!couponInfo && <Link to="/coupons" target="_blank" style={{ fontSize: 12, color: 'var(--neon-blue)', marginTop: 6, display: 'inline-block' }}>Xem mã giảm giá có sẵn →</Link>}
             </div>
 
             <div style={{ height: 1, background: 'var(--border)', marginBottom: 16 }} />

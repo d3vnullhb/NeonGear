@@ -1,11 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ShoppingCart, Star, ChevronLeft, ZoomIn, X, ChevronRight } from 'lucide-react'
 import api from '../../lib/api'
 import type { Product, ProductVariant, Review } from '../../types'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import Spinner from '../../components/Spinner'
+import ProductCard from '../../components/ProductCard'
+
+interface RecentProduct { product_id: number; name: string; slug: string; price: number; image_url: string | null; brand_name: string | null }
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -21,6 +24,8 @@ export default function ProductDetail() {
   const [adding, setAdding] = useState(false)
   const [zoomOpen, setZoomOpen] = useState(false)
   const [zoomIndex, setZoomIndex] = useState(0)
+  const [related, setRelated] = useState<Product[]>([])
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentProduct[]>([])
 
   useEffect(() => {
     if (!slug) return
@@ -59,6 +64,32 @@ export default function ProductDetail() {
     return () => { document.body.style.overflow = '' }
   }, [zoomOpen])
 
+  // Recently viewed + related products
+  useEffect(() => {
+    if (!product) return
+    const KEY = 'ng_recent_products'
+    try {
+      const prev: RecentProduct[] = JSON.parse(localStorage.getItem(KEY) ?? '[]')
+      const entry: RecentProduct = {
+        product_id: product.product_id,
+        name: product.name,
+        slug: product.slug,
+        price: selectedVariant ? Number(selectedVariant.price) : 0,
+        image_url: product.product_images?.[0]?.image_url ?? selectedVariant?.image_url ?? null,
+        brand_name: (product as any).brands?.name ?? null,
+      }
+      const updated = [entry, ...prev.filter(p => p.product_id !== product.product_id)].slice(0, 8)
+      localStorage.setItem(KEY, JSON.stringify(updated))
+      setRecentlyViewed(prev.filter(p => p.product_id !== product.product_id).slice(0, 4))
+    } catch {}
+    const catId = (product as any).categories?.category_id
+    if (catId) {
+      api.get(`/products?category_id=${catId}&limit=8`)
+        .then(r => setRelated((r.data.data ?? []).filter((p: Product) => p.product_id !== product.product_id).slice(0, 4)))
+        .catch(() => {})
+    }
+  }, [product?.product_id])
+
   const variants = Array.isArray(product?.product_variants) ? product!.product_variants : product?.product_variants ? [product.product_variants] : []
   const price = selectedVariant ? Number(selectedVariant.price) : 0
   const comparePrice = selectedVariant?.compare_price ? Number(selectedVariant.compare_price) : null
@@ -93,7 +124,7 @@ export default function ProductDetail() {
 
   return (
     <>
-      <div className="w-full max-w-5xl mx-auto px-4 py-8">
+      <div className="w-full max-w-7xl mx-auto px-6 py-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm mb-6 btn-ghost py-2 px-3">
           <ChevronLeft size={16} /> Quay lại
         </button>
@@ -220,8 +251,40 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* ── Related products ── */}
+        {related.length > 0 && (
+          <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+            <h2 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.2rem', marginBottom: 20 }}>Sản phẩm liên quan</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {related.map(p => <ProductCard key={p.product_id} product={p} />)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Recently viewed ── */}
+        {recentlyViewed.length > 0 && (
+          <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+            <h2 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.2rem', marginBottom: 20 }}>Đã xem gần đây</h2>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {recentlyViewed.map(p => (
+                <Link key={p.product_id} to={`/products/${p.slug}`} className="card" style={{ width: 160, flexShrink: 0, textDecoration: 'none', padding: 12, display: 'flex', flexDirection: 'column', gap: 8, transition: 'transform 200ms' }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-4px)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                >
+                  {p.image_url
+                    ? <img src={p.image_url} alt={p.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', borderRadius: 8, background: 'var(--surface-raised)' }} />
+                    : <div style={{ width: '100%', aspectRatio: '1', background: 'var(--surface-raised)', borderRadius: 8 }} />}
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{p.name}</p>
+                  {p.brand_name && <p style={{ fontSize: 12, color: 'var(--neon-blue)' }}>{p.brand_name}</p>}
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--neon-blue)' }}>{p.price.toLocaleString('vi-VN')}₫</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Reviews */}
-        <div>
+        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
           <h2 className="text-xl font-bold mb-4">Đánh giá ({reviews.length})</h2>
           {reviews.length === 0
             ? <p style={{ color: 'var(--muted)' }}>Chưa có đánh giá nào.</p>

@@ -5,6 +5,14 @@
   .w-full { width: 100% !important; }
   .min-w-0 { min-width: 0 !important; }
   .flex-1 { flex: 1 1 0% !important; }
+  .mx-auto { margin-left: auto !important; margin-right: auto !important; }
+  .max-w-5xl { max-width: 64rem !important; }
+  .max-w-4xl { max-width: 56rem !important; }
+  .max-w-6xl { max-width: 72rem !important; }
+  .max-w-7xl { max-width: 80rem !important; }
+  .max-w-2xl { max-width: 42rem !important; }
+  .max-w-xl  { max-width: 36rem !important; }
+  .max-w-lg  { max-width: 32rem !important; }
 }
 
 :root {
@@ -13,8 +21,8 @@
   --surface-raised: #1a1a26;
   --neon-blue: #00b4ff;
   --neon-cyan: #00e5ff;
-  --text: #e8e8f0;
-  --muted: #6b6b8a;
+  --text: #f0f0f8;
+  --muted: #b0b0cc;
   --border: #1e1e30;
   --success: #00ff9d;
   --warning: #ffb800;
@@ -35,9 +43,12 @@ body {
   background-color: var(--bg);
   color: var(--text);
   font-family: 'Inter', sans-serif;
+  font-size: 16px;
   min-height: 100dvh;
-  line-height: 1.6;
+  line-height: 1.65;
   width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -80,7 +91,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', sans-serif; line-height: 
   padding: 10px 14px;
   width: 100%;
   outline: none;
-  font-size: 14px;
+  font-size: 15.5px;
   transition: border-color 200ms, box-shadow 200ms;
   font-family: 'Inter', sans-serif;
 }
@@ -98,7 +109,7 @@ textarea.input-inset { resize: vertical; min-height: 80px; }
   background: linear-gradient(135deg, #00b4ff 0%, #0090d4 100%);
   color: #000;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15.5px;
   border-radius: 10px;
   padding: 10px 20px;
   border: none;
@@ -127,7 +138,7 @@ textarea.input-inset { resize: vertical; min-height: 80px; }
   padding: 10px 20px;
   cursor: pointer;
   transition: all 200ms;
-  font-size: 14px;
+  font-size: 15.5px;
   font-family: 'Inter', sans-serif;
   display: inline-flex;
   align-items: center;
@@ -144,7 +155,7 @@ textarea.input-inset { resize: vertical; min-height: 80px; }
   padding: 10px 20px;
   cursor: pointer;
   transition: all 200ms;
-  font-size: 14px;
+  font-size: 15.5px;
   font-family: 'Inter', sans-serif;
 }
 .btn-danger:hover { background: rgba(255,77,106,0.1); border-color: var(--error); }

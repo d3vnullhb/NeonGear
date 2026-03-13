@@ -42,27 +42,79 @@ export const listProducts = (params: {
   brand_id?: number
   search?: string
   is_active?: boolean
+  sort?: string
+  in_stock?: boolean
+  min_price?: number
+  max_price?: number
+  attribute_filters?: { attribute_id: number; values: string[] }[]
 }) => {
-  const { page, limit, category_id, brand_id, search, is_active } = params
+  const { page, limit, category_id, brand_id, search, is_active, sort, in_stock, min_price, max_price, attribute_filters } = params
   const where: any = { deleted_at: null }
   if (category_id) where.category_id = category_id
   if (brand_id) where.brand_id = brand_id
   if (search) where.name = { contains: search, mode: 'insensitive' }
   if (is_active !== undefined) where.is_active = is_active
+
+  // Variant-level filters (in_stock, price range, attributes)
+  const variantConditions: any[] = []
+  if (in_stock) variantConditions.push({ inventory: { quantity: { gt: 0 } } })
+  if (min_price !== undefined || max_price !== undefined) {
+    const priceFilter: any = {}
+    if (min_price !== undefined) priceFilter.gte = min_price
+    if (max_price !== undefined) priceFilter.lte = max_price
+    variantConditions.push({ price: priceFilter })
+  }
+  if (attribute_filters && attribute_filters.length > 0) {
+    for (const f of attribute_filters) {
+      variantConditions.push({ product_attribute_values: { some: { attribute_id: f.attribute_id, value: { in: f.values } } } })
+    }
+  }
+  if (variantConditions.length > 0) {
+    where.product_variants = variantConditions.length === 1 ? variantConditions[0] : { AND: variantConditions }
+  }
+
+  // Sort
+  let orderBy: any = { created_at: 'desc' }
+  switch (sort) {
+    case 'oldest': orderBy = { created_at: 'asc' }; break
+    case 'price_asc': orderBy = { product_variants: { price: 'asc' } }; break
+    case 'price_desc': orderBy = { product_variants: { price: 'desc' } }; break
+    case 'name_asc': orderBy = { name: 'asc' }; break
+    case 'name_desc': orderBy = { name: 'desc' }; break
+    default: orderBy = { created_at: 'desc' }
+  }
+
   return Promise.all([
     prisma.products.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { created_at: 'desc' },
+      orderBy,
       select: {
         ...productSelect,
-        // 1-to-1: default variant per product (partial unique index)
         product_variants: { select: variantSelect },
       },
     }),
     prisma.products.count({ where }),
   ])
+}
+
+export const getProductAttributeOptions = async (category_id?: number) => {
+  const productWhere: any = { deleted_at: null, is_active: true }
+  if (category_id) productWhere.category_id = category_id
+  const rows = await prisma.product_attribute_values.findMany({
+    where: { product_variants: { deleted_at: null, products: productWhere } },
+    select: { attribute_id: true, value: true, attributes: { select: { attribute_id: true, name: true } } },
+    distinct: ['attribute_id', 'value'],
+    orderBy: [{ attribute_id: 'asc' }],
+  })
+  const map = new Map<number, { attribute_id: number; name: string; values: string[] }>()
+  for (const row of rows) {
+    if (!row.attributes || row.attribute_id == null) continue
+    if (!map.has(row.attribute_id)) map.set(row.attribute_id, { attribute_id: row.attribute_id, name: row.attributes.name, values: [] })
+    map.get(row.attribute_id)!.values.push(row.value)
+  }
+  return Array.from(map.values())
 }
 
 export const getProductBySlug = async (slug: string) => {

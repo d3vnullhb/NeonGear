@@ -14,9 +14,11 @@ const productCategories = [
 
 const navLinks = [
   { label: 'Trang Chủ', href: '/' },
+  { label: 'Giới thiệu', href: '/about' },
   { label: 'Sản phẩm', href: '/products', hasDropdown: true },
   { label: 'Bài viết', href: '/posts' },
   { label: 'Liên hệ', href: '/contact' },
+  { label: 'Khuyến mãi', href: '/coupons' },
 ]
 
 export default function Navbar() {
@@ -86,31 +88,34 @@ export default function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 w-full"
     >
       {/* Main bar */}
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center">
+      <div className="max-w-7xl mx-auto px-4 h-16 items-center" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto' }}>
 
-        {/* Mobile hamburger */}
-        <button
-          className="lg:hidden mr-3"
-          style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer' }}
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menu"
-        >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <Zap size={22} style={{ color: 'var(--neon-blue)' }} />
-          <span
-            className="text-xl font-bold"
-            style={{ fontFamily: 'Space Grotesk', color: 'var(--neon-blue)', letterSpacing: '-0.01em' }}
+        {/* Left: hamburger + logo */}
+        <div className="flex items-center gap-3">
+          {/* Mobile hamburger */}
+          <button
+            className="lg:hidden"
+            style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer' }}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Menu"
           >
-            NeonGear
-          </span>
-        </Link>
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <Zap size={22} style={{ color: 'var(--neon-blue)' }} />
+            <span
+              className="text-xl font-bold"
+              style={{ fontFamily: 'Space Grotesk', color: 'var(--neon-blue)', letterSpacing: '-0.01em' }}
+            >
+              NeonGear
+            </span>
+          </Link>
+        </div>
 
         {/* Desktop nav links */}
-        <div className="hidden lg:flex items-center justify-center gap-10 flex-1 px-8">
+        <div className="hidden lg:flex items-center justify-center gap-10">
           {navLinks.map((link) =>
             link.hasDropdown ? (
               <div key={link.href} className="relative" ref={productDropRef}>
@@ -180,7 +185,7 @@ export default function Navbar() {
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-1 justify-end">
 
           {/* Search toggle */}
           <button
@@ -389,6 +394,14 @@ export default function Navbar() {
           >
             Trang Chủ
           </Link>
+          <Link
+            to="/about"
+            onClick={() => setMenuOpen(false)}
+            className="px-3 py-2.5 rounded-lg text-sm font-medium"
+            style={{ color: isActive('/about') ? 'var(--neon-blue)' : 'var(--text)', textDecoration: 'none' }}
+          >
+            Giới thiệu
+          </Link>
 
           {/* Products accordion */}
           <div>
@@ -439,6 +452,14 @@ export default function Navbar() {
             style={{ color: isActive('/contact') ? 'var(--neon-blue)' : 'var(--text)', textDecoration: 'none' }}
           >
             Liên hệ
+          </Link>
+          <Link
+            to="/coupons"
+            onClick={() => setMenuOpen(false)}
+            className="px-3 py-2.5 rounded-lg text-sm font-medium"
+            style={{ color: isActive('/coupons') ? 'var(--neon-blue)' : 'var(--text)', textDecoration: 'none' }}
+          >
+            Khuyến mãi
           </Link>
         </div>
       )}

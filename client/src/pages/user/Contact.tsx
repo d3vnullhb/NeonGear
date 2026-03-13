@@ -68,7 +68,7 @@ export default function Contact() {
 
         {/* ─ Left: Info ─ */}
         <div>
-          <h1 style={{ fontFamily: 'Space Grotesk', fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 700, marginBottom: 10, lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: 'Space Grotesk', fontSize: 'clamp(1.4rem, 2.5vw, 2rem)', fontWeight: 700, marginBottom: 10, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
             Liên hệ với chúng tôi
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 36 }}>

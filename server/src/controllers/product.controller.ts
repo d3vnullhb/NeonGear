@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import {
   listProducts,
+  getProductAttributeOptions,
   getProductBySlug,
   getProductById,
   createProduct,
@@ -25,9 +26,37 @@ export const getProducts = async (req: Request, res: Response) => {
     const category_id = req.query.category_id ? parseInt(req.query.category_id as string) : undefined
     const brand_id = req.query.brand_id ? parseInt(req.query.brand_id as string) : undefined
     const search = req.query.search as string | undefined
-    const [products, total] = await listProducts({ page, limit, category_id, brand_id, search, is_active: true })
+    const sort = req.query.sort as string | undefined
+    const in_stock = req.query.in_stock === 'true'
+    const min_price = req.query.min_price ? parseFloat(req.query.min_price as string) : undefined
+    const max_price = req.query.max_price ? parseFloat(req.query.max_price as string) : undefined
+    // Parse attr_X=val1,val2 params
+    const attribute_filters: { attribute_id: number; values: string[] }[] = []
+    for (const [key, val] of Object.entries(req.query)) {
+      if (key.startsWith('attr_')) {
+        const attrId = parseInt(key.replace('attr_', ''))
+        if (!isNaN(attrId) && typeof val === 'string' && val) {
+          attribute_filters.push({ attribute_id: attrId, values: val.split(',') })
+        }
+      }
+    }
+    const [products, total] = await listProducts({
+      page, limit, category_id, brand_id, search, is_active: true,
+      sort, in_stock: in_stock || undefined, min_price, max_price,
+      attribute_filters: attribute_filters.length > 0 ? attribute_filters : undefined,
+    })
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy sản phẩm thành công', data: products, pagination: { total, totalPages, page, limit } })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+export const getProductFilterOptions = async (req: Request, res: Response) => {
+  try {
+    const category_id = req.query.category_id ? parseInt(req.query.category_id as string) : undefined
+    const data = await getProductAttributeOptions(category_id)
+    res.json({ success: true, data })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }

@@ -8,7 +8,7 @@ export default function UserLayout() {
   return (
     <div className="flex flex-col flex-1 w-full min-w-0">
       <Navbar />
-      <main className="flex-1 w-full min-w-0 pt-16">
+      <main className="flex-1 w-full min-w-0" style={{ paddingTop: '64px' }}>
         <Outlet />
       </main>
       <Footer />

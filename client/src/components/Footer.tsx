@@ -129,7 +129,7 @@ export default function Footer() {
             <span className="text-2xl font-bold neon-text" style={{ fontFamily: 'Space Grotesk' }}>NeonGear</span>
           </Link>
           <span className="text-base" style={{ color: 'var(--muted)', fontStyle: 'italic', marginLeft: '0.5rem' }}>
-            Vì gaming là đam mê
+            Nâng tầm trải nghiệm gaming của bạn
           </span>
         </div>
 
@@ -142,15 +142,25 @@ export default function Footer() {
             <div className="flex flex-col gap-3.5">
               <div className="flex items-start gap-2.5">
                 <MapPin size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--neon-blue)' }} />
-                <span className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>123 Đường Cầu Giấy, Quận Cầu Giấy, Hà Nội</span>
+                <span className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
+                  Số 168 Nguyễn Văn Cừ (nối dài),<br />P. An Bình, Q. Ninh Kiều, TP. Cần Thơ
+                </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone size={15} className="shrink-0" style={{ color: 'var(--neon-blue)' }} />
-                <a href="tel:1800neongear" className="text-sm font-semibold transition-colors" style={{ color: 'var(--muted)' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--neon-blue)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}>
-                  1800 NEONGEAR
-                </a>
+                <span className="text-sm font-semibold" style={{ color: 'var(--muted)' }}>
+                  <a href="tel:0338631274" className="transition-colors"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--neon-blue)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}>
+                    0338 631 274
+                  </a>
+                  <span style={{ margin: '0 6px', opacity: 0.4 }}>|</span>
+                  <a href="tel:0583849780" className="transition-colors"
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--neon-blue)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}>
+                    0583 849 780
+                  </a>
+                </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail size={15} className="shrink-0" style={{ color: 'var(--neon-blue)' }} />
@@ -166,44 +176,47 @@ export default function Footer() {
           {/* Col 2 — Giới thiệu */}
           <div>
             <h4 className="font-bold text-sm mb-5 uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk', color: 'var(--text)' }}>Giới thiệu</h4>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {[
-                { label: 'Về NeonGear', to: '/contact' },
+                { label: 'Về NeonGear', to: '/about' },
                 { label: 'Blog & Tin tức', to: '/posts' },
-                { label: 'Liên hệ với chúng tôi', to: '/contact' },
                 { label: 'Sản phẩm', to: '/products' },
+                { label: 'Liên hệ với chúng tôi', to: '/contact' },
               ].map(item => (
                 <Link
                   key={item.label}
                   to={item.to}
-                  className="text-sm transition-colors"
+                  className="text-sm transition-colors flex items-center gap-1.5 group"
                   style={{ color: 'var(--muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--neon-blue)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
                 >
+                  <span style={{ fontSize: 10, opacity: 0.5 }}>›</span>
                   {item.label}
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Col 3 — Chính sách */}
+          {/* Col 3 — Hỗ trợ & Ưu đãi */}
           <div>
-            <h4 className="font-bold text-sm mb-5 uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk', color: 'var(--text)' }}>Chính sách</h4>
-            <div className="flex flex-col gap-3">
+            <h4 className="font-bold text-sm mb-5 uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk', color: 'var(--text)' }}>Hỗ trợ & Ưu đãi</h4>
+            <div className="flex flex-col gap-2.5">
               {[
+                { label: 'Mã giảm giá', to: '/coupons' },
                 { label: 'Chính sách bảo mật', to: '/chinh-sach/bao-mat' },
-                { label: 'Chính sách đổi trả / hoàn tiền', to: '/chinh-sach/doi-tra-hoan-tien' },
+                { label: 'Chính sách đổi trả & hoàn tiền', to: '/chinh-sach/doi-tra-hoan-tien' },
                 { label: 'Chính sách thanh toán & vận chuyển', to: '/chinh-sach/thanh-toan-van-chuyen' },
               ].map(item => (
                 <Link
                   key={item.label}
                   to={item.to}
-                  className="text-sm transition-colors"
+                  className="text-sm transition-colors flex items-center gap-1.5"
                   style={{ color: 'var(--muted)' }}
                   onMouseEnter={e => (e.currentTarget.style.color = 'var(--neon-blue)')}
                   onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
                 >
+                  <span style={{ fontSize: 10, opacity: 0.5 }}>›</span>
                   {item.label}
                 </Link>
               ))}

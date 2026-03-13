@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../lib/api'
 import { Camera } from 'lucide-react'
@@ -18,11 +18,28 @@ export default function Profile() {
   const [pwMsg, setPwMsg] = useState('')
   const [avatarLoading, setAvatarLoading] = useState(false)
 
-  // Independent state for each DOB part so partial selections are preserved
-  const initParts = (user?.date_of_birth?.split('T')[0] ?? '').split('-')
-  const [dobYear,  setDobYear]  = useState(initParts[0] ?? '')
-  const [dobMonth, setDobMonth] = useState(initParts[1] ?? '')
-  const [dobDay,   setDobDay]   = useState(initParts[2] ?? '')
+  // DOB parts stored as plain number strings ("1"–"12", "1"–"31", "2000")
+  const [dobYear,  setDobYear]  = useState('')
+  const [dobMonth, setDobMonth] = useState('')
+  const [dobDay,   setDobDay]   = useState('')
+
+  // Sync form and DOB state when user data loads (auth context may be async)
+  useEffect(() => {
+    if (!user) return
+    setForm({
+      full_name: user.full_name ?? '',
+      phone: user.phone ?? '',
+      address: user.address ?? '',
+      date_of_birth: user.date_of_birth?.split('T')[0] ?? '',
+    })
+    if (user.date_of_birth) {
+      const parts = user.date_of_birth.split('T')[0].split('-')
+      setDobYear(parts[0] ?? '')
+      // Remove leading zeros so they match plain-number option values
+      setDobMonth(parts[1] ? String(parseInt(parts[1])) : '')
+      setDobDay(parts[2]   ? String(parseInt(parts[2])) : '')
+    }
+  }, [user?.user_id])
 
   function daysInMonth(month: string, year: string) {
     if (!month) return 31
@@ -38,9 +55,10 @@ export default function Profile() {
     if (part === 'day')   setDobDay(value)
     // Clamp day when month/year reduces available days
     if (y && m && d && parseInt(d) > daysInMonth(m, y)) {
-      d = String(daysInMonth(m, y)).padStart(2, '0')
+      d = String(daysInMonth(m, y))
       setDobDay(d)
     }
+    // Build ISO date string with zero-padded month/day for backend
     const dateStr = y && m && d
       ? `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
       : ''
@@ -99,7 +117,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8">
+    <div className="w-full max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Hồ sơ cá nhân</h1>
 
       {/* Avatar */}
@@ -144,7 +162,7 @@ export default function Profile() {
               >
                 <option value="">Ngày</option>
                 {days.map(d => (
-                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                  <option key={d} value={String(d)}>{d}</option>
                 ))}
               </select>
               <select
@@ -154,7 +172,7 @@ export default function Profile() {
               >
                 <option value="">Tháng</option>
                 {months.map(m => (
-                  <option key={m} value={String(m).padStart(2, '0')}>Tháng {m}</option>
+                  <option key={m} value={String(m)}>Tháng {m}</option>
                 ))}
               </select>
               <select

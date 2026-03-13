@@ -7,6 +7,7 @@ import { WishlistProvider } from './context/WishlistContext'
 import UserLayout from './layouts/UserLayout'
 import AdminLayout from './layouts/AdminLayout'
 import { RequireAuth, RequireAdmin, RequireGuest } from './components/ProtectedRoute'
+import RouteScrollTop from './components/RouteScrollTop'
 
 import Home from './pages/user/Home'
 import Products from './pages/user/Products'
@@ -28,6 +29,8 @@ import PrivacyPolicy from './pages/user/PrivacyPolicy'
 import ReturnPolicy from './pages/user/ReturnPolicy'
 import ShippingPolicy from './pages/user/ShippingPolicy'
 import PaymentResult from './pages/user/PaymentResult'
+import Coupons from './pages/user/Coupons'
+import About from './pages/user/About'
 import NotFound from './pages/NotFound'
 
 import Dashboard from './pages/admin/Dashboard'
@@ -50,6 +53,7 @@ const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefin
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <RouteScrollTop />
       <AuthProvider>
         <CartProvider>
         <WishlistProvider>
@@ -57,11 +61,13 @@ function AppRoutes() {
             {/* User layout */}
             <Route element={<UserLayout />}>
               <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:slug" element={<ProductDetail />} />
               <Route path="/posts" element={<Posts />} />
               <Route path="/posts/:slug" element={<PostDetail />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/coupons" element={<Coupons />} />
 
               {/* Guest only */}
               <Route element={<RequireGuest />}>
