@@ -92,7 +92,7 @@ export default function Coupons() {
                   <div className="flex items-center justify-between gap-3">
                     {/* Code */}
                     <div className="flex items-center gap-2 min-w-0">
-                      <Tag size={15} style={{ color: 'var(--neon-blue)', shrink: 0 }} />
+                      <Tag size={15} style={{ color: 'var(--neon-blue)', flexShrink: 0 }} />
                       <span
                         className="font-bold tracking-widest text-sm truncate"
                         style={{ fontFamily: 'Space Grotesk', color: 'var(--neon-blue)' }}

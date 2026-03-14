@@ -385,7 +385,7 @@ export default function Checkout() {
               {cart.cart_items.map(item => {
                 const product = item.product_variants?.products
                 const variant = item.product_variants
-                const img = variant?.image_url ?? product?.product_images?.find(i => i.is_main)?.image_url
+                const img = variant?.image_url ?? (product as any)?.product_images?.find((i: any) => i.is_main)?.image_url
                 const attrs = variant?.product_attribute_values?.map(a => a.value).join(' / ')
                 return (
                   <div key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>

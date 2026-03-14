@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext'
 
 export default function CartNotification() {
   const { justAdded, dismissCart } = useCart()
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!justAdded) return
