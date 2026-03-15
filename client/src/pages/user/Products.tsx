@@ -74,6 +74,22 @@ export default function Products() {
   const search      = searchParams.get('search') ?? ''
   const category_id = searchParams.get('category_id') ?? ''
   const brand_id    = searchParams.get('brand_id') ?? ''
+
+  // Resolve ?category=<slug> → ?category_id=<id> when categories are loaded
+  const categorySlug = searchParams.get('category') ?? ''
+  const toSlug = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, '-')
+  useEffect(() => {
+    if (!categorySlug || !categories.length) return
+    // Match by generated slug from name (more reliable than DB slug field)
+    const match = categories.find(c => toSlug(c.name) === categorySlug)
+    if (match) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('category')
+      next.set('category_id', String(match.category_id))
+      setSearchParams(next, { replace: true })
+    }
+  }, [categorySlug, categories])
   const sort        = searchParams.get('sort') ?? 'newest'
   const in_stock    = searchParams.get('in_stock') === 'true'
   const min_price   = searchParams.get('min_price') ?? ''

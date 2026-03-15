@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { ShoppingCart, Heart, User, Menu, X, Search, Zap, ChevronDown, LogOut, Package, Settings } from 'lucide-react'
+import { ShoppingCart, Heart, User, Menu, X, Search, Zap, ChevronDown, LogOut, Package, Settings, Mouse, Keyboard, Headphones, LayoutGrid, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useWishlist } from '../context/WishlistContext'
 
 const productCategories = [
-  { label: 'Tất cả sản phẩm', href: '/products', desc: 'Xem toàn bộ danh mục' },
-  { label: 'Chuột Gaming', href: '/products?category=chuot', desc: 'Chuột có dây & không dây' },
-  { label: 'Bàn phím', href: '/products?category=ban-phim', desc: 'Cơ, HE, Rapid Trigger' },
-  { label: 'Tai nghe', href: '/products?category=tai-nghe', desc: 'Gaming & Hi-Fi' },
+  { label: 'Chuột',    href: '/products?category=chuot',    desc: 'Có dây & không dây',   icon: Mouse,      color: '#00b4ff' },
+  { label: 'Bàn Phím', href: '/products?category=ban-phim', desc: 'Cơ, HE, Rapid Trigger', icon: Keyboard,   color: '#00e5ff' },
+  { label: 'Tai Nghe', href: '/products?category=tai-nghe', desc: 'Gaming & Hi-Fi',         icon: Headphones, color: '#a78bfa' },
 ]
 
 const navLinks = [
@@ -47,7 +46,7 @@ export default function Navbar() {
     setProductDropOpen(false)
     setAccountDropOpen(false)
     setSearchOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -119,55 +118,88 @@ export default function Navbar() {
           {navLinks.map((link) =>
             link.hasDropdown ? (
               <div key={link.href} className="relative" ref={productDropRef}>
+                {/* Toggle button — click only, no hover */}
                 <button
-                  onMouseEnter={() => setProductDropOpen(true)}
                   onClick={() => setProductDropOpen(!productDropOpen)}
-                  className="flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-all"
                   style={{
                     fontSize: 15,
-                    background: 'none',
+                    background: productDropOpen ? 'var(--surface-raised)' : 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: isActive(link.href) ? 'var(--neon-blue)' : 'var(--text)',
+                    color: isActive(link.href) || productDropOpen ? 'var(--neon-blue)' : 'var(--text)',
                   }}
                 >
                   {link.label}
                   <ChevronDown
                     size={14}
                     style={{
-                      transition: 'transform 200ms',
+                      transition: 'transform 250ms cubic-bezier(.4,0,.2,1)',
                       transform: productDropOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      color: 'var(--muted)',
+                      color: productDropOpen ? 'var(--neon-blue)' : 'var(--muted)',
                     }}
                   />
                 </button>
 
-                {/* Product mega dropdown */}
+                {/* Dropdown panel */}
                 {productDropOpen && (
                   <div
-                    onMouseLeave={() => setProductDropOpen(false)}
-                    className="absolute top-full left-0 mt-2 card animate-fade-in"
-                    style={{ minWidth: 260, padding: '8px', zIndex: 100 }}
+                    className="absolute top-full left-1/2 mt-3 animate-fade-in"
+                    style={{
+                      transform: 'translateX(-50%)',
+                      width: 320,
+                      zIndex: 100,
+                      borderRadius: 16,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,180,255,0.08)',
+                      overflow: 'hidden',
+                    }}
                   >
-                    {productCategories.map((cat) => (
+                    {/* Header */}
+                    <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Danh mục sản phẩm</p>
+                    </div>
+
+                    {/* Categories */}
+                    <div style={{ padding: '8px' }}>
+                      {productCategories.map((cat) => {
+                        const Icon = cat.icon
+                        return (
+                          <Link
+                            key={cat.href}
+                            to={cat.href}
+                            onClick={() => setProductDropOpen(false)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, textDecoration: 'none', transition: 'background 150ms' }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                          >
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cat.color}18`, border: `1px solid ${cat.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Icon size={18} style={{ color: cat.color }} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', margin: 0 }}>{cat.label}</p>
+                              <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>{cat.desc}</p>
+                            </div>
+                            <ArrowRight size={14} style={{ color: 'var(--border)', flexShrink: 0 }} />
+                          </Link>
+                        )
+                      })}
+                    </div>
+
+                    {/* Footer — xem tất cả */}
+                    <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
                       <Link
-                        key={cat.href}
-                        to={cat.href}
-                        className="flex flex-col px-3 py-2.5 rounded-lg transition-all"
-                        style={{ textDecoration: 'none', color: 'var(--text)' }}
-                        onMouseEnter={(e) => {
-                          ;(e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)'
-                          ;(e.currentTarget as HTMLElement).style.color = 'var(--neon-blue)'
-                        }}
-                        onMouseLeave={(e) => {
-                          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                          ;(e.currentTarget as HTMLElement).style.color = 'var(--text)'
-                        }}
+                        to="/products"
+                        onClick={() => setProductDropOpen(false)}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', borderRadius: 10, textDecoration: 'none', fontSize: 13, fontWeight: 700, color: 'var(--neon-blue)', background: 'rgba(0,180,255,0.06)', transition: 'background 150ms' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,180,255,0.12)' }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,180,255,0.06)' }}
                       >
-                        <span className="text-sm font-semibold">{cat.label}</span>
-                        <span className="text-xs" style={{ color: 'var(--muted)', marginTop: 1 }}>{cat.desc}</span>
+                        <LayoutGrid size={14} />
+                        Xem tất cả sản phẩm
                       </Link>
-                    ))}
+                    </div>
                   </div>
                 )}
               </div>

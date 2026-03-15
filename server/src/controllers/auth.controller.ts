@@ -69,6 +69,11 @@ export const login = async (req: Request, res: Response) => {
       return
     }
 
+    if (user.is_locked) {
+      res.status(403).json({ success: false, message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' })
+      return
+    }
+
     await updateLastLogin(user.user_id)
 
     const token = signToken(user.user_id, user.role ?? 'user')

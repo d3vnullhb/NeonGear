@@ -35,21 +35,75 @@ const INFO = [
   },
 ]
 
+type FormErrors = { full_name?: string; email?: string; subject?: string; message?: string }
+
+function validateForm(form: { full_name: string; email: string; subject: string; message: string }): FormErrors {
+  const errs: FormErrors = {}
+  // Full name
+  if (!form.full_name.trim()) {
+    errs.full_name = 'Vui lòng nhập họ và tên.'
+  } else if (form.full_name.trim().length < 2) {
+    errs.full_name = 'Họ và tên phải có ít nhất 2 ký tự.'
+  } else if (!/^[\p{L}\s]+$/u.test(form.full_name.trim())) {
+    errs.full_name = 'Họ và tên không được chứa số hoặc ký tự đặc biệt.'
+  }
+  // Email
+  if (!form.email.trim()) {
+    errs.email = 'Vui lòng nhập địa chỉ email.'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    errs.email = 'Địa chỉ email không hợp lệ.'
+  } else if (!/@gmail\.com$/i.test(form.email.trim())) {
+    errs.email = 'Vui lòng sử dụng địa chỉ Gmail (@gmail.com).'
+  }
+  // Subject (optional but min length if filled)
+  if (form.subject.trim() && form.subject.trim().length < 5) {
+    errs.subject = 'Tiêu đề phải có ít nhất 5 ký tự.'
+  }
+  // Message
+  if (!form.message.trim()) {
+    errs.message = 'Vui lòng nhập nội dung tin nhắn.'
+  } else if (form.message.trim().length < 10) {
+    errs.message = 'Nội dung phải có ít nhất 10 ký tự.'
+  } else if (form.message.trim().length > 2000) {
+    errs.message = 'Nội dung không được vượt quá 2000 ký tự.'
+  }
+  return errs
+}
+
 export default function Contact() {
   const [form, setForm] = useState({ full_name: '', email: '', subject: '', message: '' })
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
+  const [serverError, setServerError] = useState('')
+
+  const handleBlur = (field: keyof FormErrors) => {
+    setTouched(t => ({ ...t, [field]: true }))
+    setErrors(validateForm(form))
+  }
+
+  const handleChange = (field: keyof FormErrors, value: string) => {
+    const next = { ...form, [field]: value }
+    setForm(next)
+    if (touched[field]) setErrors(validateForm(next))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true); setError('')
+    // Mark all fields touched and validate
+    setTouched({ full_name: true, email: true, subject: true, message: true })
+    const errs = validateForm(form)
+    setErrors(errs)
+    if (Object.keys(errs).length > 0) return
+    setLoading(true); setServerError('')
     try {
       await api.post('/contacts', form)
       setSuccess(true)
       setForm({ full_name: '', email: '', subject: '', message: '' })
+      setErrors({}); setTouched({})
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Gửi thất bại, vui lòng thử lại')
+      setServerError(err.response?.data?.message ?? 'Gửi thất bại, vui lòng thử lại')
     } finally { setLoading(false) }
   }
 
@@ -104,7 +158,7 @@ export default function Contact() {
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <a
-                href="https://facebook.com/neongear"
+                href="https://www.facebook.com/cao.hoai.bao.39025"
                 target="_blank" rel="noreferrer"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -149,12 +203,12 @@ export default function Contact() {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, fontFamily: 'Space Grotesk' }}>Gửi tin nhắn</h2>
 
-              {error && (
+              {serverError && (
                 <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', color: 'var(--error)', fontSize: 13 }}>
-                  {error}
+                  {serverError}
                 </div>
               )}
 
@@ -165,24 +219,28 @@ export default function Contact() {
                     Họ và tên <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
-                    required
                     className="input-inset w-full"
                     placeholder="Nguyễn Văn A"
                     value={form.full_name}
-                    onChange={e => setForm({ ...form, full_name: e.target.value })}
+                    onChange={e => handleChange('full_name', e.target.value)}
+                    onBlur={() => handleBlur('full_name')}
+                    style={errors.full_name ? { border: '1px solid var(--error)' } : {}}
                   />
+                  {errors.full_name && <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 5 }}>{errors.full_name}</p>}
                 </div>
                 <div>
                   <label style={{ fontSize: 13, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
                     Email <span style={{ color: 'var(--error)' }}>*</span>
                   </label>
                   <input
-                    required type="email"
                     className="input-inset w-full"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    onChange={e => handleChange('email', e.target.value)}
+                    onBlur={() => handleBlur('email')}
+                    style={errors.email ? { border: '1px solid var(--error)' } : {}}
                   />
+                  {errors.email && <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 5 }}>{errors.email}</p>}
                 </div>
               </div>
 
@@ -193,8 +251,11 @@ export default function Contact() {
                   className="input-inset w-full"
                   placeholder="VD: Hỏi về chính sách đổi trả"
                   value={form.subject}
-                  onChange={e => setForm({ ...form, subject: e.target.value })}
+                  onChange={e => handleChange('subject', e.target.value)}
+                  onBlur={() => handleBlur('subject')}
+                  style={errors.subject ? { border: '1px solid var(--error)' } : {}}
                 />
+                {errors.subject && <p style={{ fontSize: 12, color: 'var(--error)', marginTop: 5 }}>{errors.subject}</p>}
               </div>
 
               {/* Message */}
@@ -203,12 +264,23 @@ export default function Contact() {
                   Nội dung <span style={{ color: 'var(--error)' }}>*</span>
                 </label>
                 <textarea
-                  required rows={6}
+                  rows={6}
                   className="input-inset w-full"
                   placeholder="Mô tả vấn đề hoặc câu hỏi của bạn..."
                   value={form.message}
-                  onChange={e => setForm({ ...form, message: e.target.value })}
+                  onChange={e => handleChange('message', e.target.value)}
+                  onBlur={() => handleBlur('message')}
+                  style={errors.message ? { border: '1px solid var(--error)' } : {}}
                 />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+                  {errors.message
+                    ? <p style={{ fontSize: 12, color: 'var(--error)' }}>{errors.message}</p>
+                    : <span />
+                  }
+                  <p style={{ fontSize: 12, color: form.message.length > 2000 ? 'var(--error)' : 'var(--muted)' }}>
+                    {form.message.length}/2000
+                  </p>
+                </div>
               </div>
 
               {/* Submit */}

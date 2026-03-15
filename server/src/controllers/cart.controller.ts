@@ -71,10 +71,13 @@ export const updateCartItemHandler = async (req: AuthRequest, res: Response) => 
       return
     }
 
-    const inventory = await getInventoryByVariant(item.variant_id!)
-    if (!inventory || inventory.quantity < quantity) {
-      res.status(400).json({ success: false, message: 'Số lượng vượt quá tồn kho' })
-      return
+    // Only check inventory when increasing quantity
+    if (quantity > item.quantity) {
+      const inventory = await getInventoryByVariant(item.variant_id!)
+      if (!inventory || inventory.quantity < quantity) {
+        res.status(400).json({ success: false, message: 'Số lượng vượt quá tồn kho' })
+        return
+      }
     }
 
     const updated = await updateCartItem(id, parseInt(quantity))

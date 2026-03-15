@@ -10,11 +10,29 @@ export const upsertInventory = (variant_id: number, quantity: number) =>
     create: { variant_id, quantity },
   })
 
-export const adjustInventory = (variant_id: number, delta: number) =>
-  prisma.inventory.update({
-    where: { variant_id },
-    data: { quantity: { increment: delta }, updated_at: new Date() },
-  })
+export const adjustInventory = async (variant_id: number, delta: number) => {
+  if (delta > 0) {
+    // Restore (cancel/return): raw SQL to avoid Prisma nullable-unique upsert issues
+    const updated = await prisma.$executeRaw`
+      UPDATE inventory SET quantity = quantity + ${delta}, updated_at = NOW()
+      WHERE variant_id = ${variant_id}
+    `
+    if (updated === 0) {
+      // Record doesn't exist yet — create it
+      await prisma.$executeRaw`
+        INSERT INTO inventory (variant_id, quantity, updated_at) VALUES (${variant_id}, ${delta}, NOW())
+      `
+    }
+    return
+  }
+  // Decrement: atomic check to prevent going below 0
+  const result = await prisma.$executeRaw`
+    UPDATE inventory
+    SET quantity = quantity + ${delta}, updated_at = NOW()
+    WHERE variant_id = ${variant_id} AND quantity + ${delta} >= 0
+  `
+  if (result === 0) throw new Error(`Sản phẩm không đủ tồn kho (variant_id=${variant_id})`)
+}
 
 export const addInventoryTransaction = (data: {
   variant_id: number

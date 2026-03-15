@@ -13,6 +13,7 @@ import couponRoutes from './coupon.routes'
 import postRoutes from './post.routes'
 import contactRoutes from './contact.routes'
 import subscriberRoutes from './subscriber.routes'
+import postCategoryRoutes from './postCategory.routes'
 import adminRoutes from './admin'
 
 const router = Router()
@@ -31,6 +32,7 @@ router.use('/coupons', couponRoutes)
 router.use('/posts', postRoutes)
 router.use('/contacts', contactRoutes)
 router.use('/subscribers', subscriberRoutes)
+router.use('/post-categories', postCategoryRoutes)
 router.use('/admin', adminRoutes)
 
 export default router

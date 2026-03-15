@@ -10,6 +10,7 @@ import {
   softDeleteReview,
   approveReview,
   addReviewImages,
+  getUserReviewsByProductIds,
 } from '../models/review.model'
 import { streamToCloudinary } from '../middlewares/upload.middleware'
 
@@ -102,6 +103,18 @@ export const deleteReviewHandler = async (req: AuthRequest, res: Response) => {
     }
     await softDeleteReview(review_id)
     res.json({ success: true, message: 'Xoá đánh giá thành công' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+export const getMyReviewsForProducts = async (req: AuthRequest, res: Response) => {
+  try {
+    const raw = req.query.product_ids as string
+    if (!raw) { res.json({ success: true, data: [] }); return }
+    const product_ids = raw.split(',').map(Number).filter(Boolean)
+    const reviews = await getUserReviewsByProductIds(req.user!.user_id, product_ids)
+    res.json({ success: true, data: reviews })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }

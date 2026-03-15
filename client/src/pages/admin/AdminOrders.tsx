@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Trash2 } from 'lucide-react'
 import api from '../../lib/api'
 import type { Order, Pagination } from '../../types'
 import Spinner from '../../components/Spinner'
@@ -35,6 +35,8 @@ export default function AdminOrders() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState('')
   const [orderStatuses, setOrderStatuses] = useState<{ status_id: number; name: string }[]>([])
+  const [confirmDelete, setConfirmDelete] = useState<{ order_id: number; order_code: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     api.get('/orders/statuses').then((res) => setOrderStatuses(res.data.data ?? []))
@@ -60,6 +62,18 @@ export default function AdminOrders() {
     if (!status) return
     await api.put(`/admin/orders/${orderId}/status`, { status_id: status.status_id })
     fetchOrders()
+  }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await api.delete(`/admin/orders/${confirmDelete.order_id}`)
+      setConfirmDelete(null)
+      fetchOrders()
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -125,9 +139,20 @@ export default function AdminOrders() {
                         {o.created_at ? new Date(o.created_at).toLocaleDateString('vi-VN') : ''}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <Link to={`/orders/${o.order_id}`} style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(0,180,255,0.1)', border: '1px solid rgba(0,180,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--neon-blue)' }} title="Xem chi tiết">
-                          <ExternalLink size={13} />
-                        </Link>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <Link to={`/orders/${o.order_id}`} style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(0,180,255,0.1)', border: '1px solid rgba(0,180,255,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--neon-blue)' }} title="Xem chi tiết">
+                            <ExternalLink size={13} />
+                          </Link>
+                          {(o.order_status?.name === 'cancelled' || o.order_status?.name === 'delivered') && (
+                            <button
+                              onClick={() => setConfirmDelete({ order_id: o.order_id, order_code: o.order_code })}
+                              title="Xoá đơn hàng"
+                              style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -145,6 +170,30 @@ export default function AdminOrders() {
               style={{ width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: p === page ? 700 : 400, background: p === page ? 'var(--neon-blue)' : 'var(--surface-raised)', color: p === page ? '#000' : 'var(--text)', transition: 'all 150ms' }}
             >{p}</button>
           ))}
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <div className="card" style={{ padding: '28px 32px', maxWidth: 400, width: '90%', textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Trash2 size={22} style={{ color: 'var(--error)' }} />
+            </div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Xoá đơn hàng?</h3>
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
+              Bạn có chắc muốn xoá đơn <span style={{ color: 'var(--neon-blue)', fontFamily: 'monospace', fontWeight: 700 }}>{confirmDelete.order_code}</span>? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setConfirmDelete(null)} disabled={deleting}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-raised)', color: 'var(--text)', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+                Huỷ
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--error)', color: '#fff', fontSize: 13, cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: deleting ? 0.7 : 1 }}>
+                {deleting ? 'Đang xoá...' : 'Xoá'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

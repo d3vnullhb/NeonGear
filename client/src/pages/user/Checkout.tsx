@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { ArrowLeft, Lock, Truck, Zap, CreditCard, Wallet, Package, Banknote, ShieldCheck, RefreshCw, Tag } from 'lucide-react'
+import { ArrowLeft, Lock, Truck, Zap, CreditCard, Wallet, Package, Banknote, ShieldCheck, RefreshCw, Tag, Copy, CheckCircle2 } from 'lucide-react'
+
+const BANK_ID      = '970436'        // Vietcombank
+const BANK_SHORT   = 'Vietcombank'
+const BANK_ACCOUNT = '9583849780'
+const BANK_HOLDER  = 'CAO HOAI BAO'
+
+const vietQR = (amount: number, info: string) =>
+  `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT}-compact2.png` +
+  `?amount=${amount}&addInfo=${encodeURIComponent(info)}&accountName=${encodeURIComponent(BANK_HOLDER)}`
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../lib/api'
@@ -109,6 +118,8 @@ export default function Checkout() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [bankModal, setBankModal] = useState<{ orderId: number; orderCode: string; amount: number } | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   const subtotal  = cart?.cart_items.reduce((s, i) => s + Number(i.product_variants?.price ?? 0) * i.quantity, 0) ?? 0
   const discount  = couponInfo?.discount_amount ?? 0
@@ -142,12 +153,6 @@ export default function Checkout() {
     setFieldErrors(e => ({ ...e, ward: undefined }))
   }
 
-  const setAddrField = (field: keyof AddressForm, value: string) => {
-    setAddr(a => ({ ...a, [field]: value }))
-    const key = field as keyof FieldErrors
-    if (key in ({} as FieldErrors)) setFieldErrors(e => ({ ...e, [key]: undefined }))
-  }
-
   const applyCoupon = async () => {
     if (!couponCode.trim()) { setCouponError('Vui lòng nhập mã giảm giá'); return }
     setCouponError(''); setApplyingCoupon(true)
@@ -160,7 +165,7 @@ export default function Checkout() {
     } finally { setApplyingCoupon(false) }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     const errors = validate(addr)
     if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
@@ -186,6 +191,12 @@ export default function Checkout() {
         throw new Error(payData.message ?? 'Không tạo được link MoMo')
       }
 
+      if (paymentMethod === 'bank_transfer') {
+        setBankModal({ orderId, orderCode: orderData.data.order_code ?? String(orderId), amount: finalTotal })
+        await fetchCart()
+        return
+      }
+
       await fetchCart()
       navigate(`/orders/${orderId}`)
     } catch (err: any) {
@@ -193,7 +204,7 @@ export default function Checkout() {
     } finally { setSubmitting(false) }
   }
 
-  if (!cart || !cart.cart_items.length) return (
+  if ((!cart || !cart.cart_items.length) && !bankModal) return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
       <Package size={48} style={{ color: 'var(--muted)' }} />
       <p style={{ color: 'var(--muted)' }}>Giỏ hàng trống</p>
@@ -336,7 +347,7 @@ export default function Checkout() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {([
                 { value: 'cod',           label: 'Thanh toán khi nhận hàng (COD)', sub: 'Thanh toán tiền mặt khi nhận hàng',                    Icon: Banknote, badge: null },
-                { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng',          sub: 'Thông tin tài khoản gửi qua email sau khi đặt hàng', Icon: CreditCard, badge: null },
+                { value: 'bank_transfer', label: 'Chuyển khoản ngân hàng',          sub: 'Hiển thị mã QR và thông tin tài khoản sau khi đặt hàng', Icon: CreditCard, badge: null },
                 { value: 'vnpay',         label: 'Thanh toán VNPay',                sub: 'ATM, thẻ tín dụng, QR Code qua cổng VNPay',          Icon: CreditCard, badge: 'vnpay' as const },
                 { value: 'momo',          label: 'Ví điện tử MoMo',                 sub: 'Quét mã QR hoặc thanh toán qua ứng dụng MoMo',       Icon: Wallet,     badge: 'momo' as const },
               ]).map(m => {
@@ -508,6 +519,80 @@ export default function Checkout() {
           </div>
         </aside>
       </div>
+
+      {/* ── Bank transfer confirmation modal ── */}
+      {bankModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+          <div className="card" style={{ padding: 0, width: '100%', maxWidth: 480, overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, rgba(0,180,255,0.12), rgba(0,229,255,0.06))', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+              <CheckCircle2 size={32} style={{ color: 'var(--success)', margin: '0 auto 8px' }} />
+              <h2 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'Space Grotesk' }}>Đặt hàng thành công!</h2>
+              <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 4 }}>Vui lòng chuyển khoản để hoàn tất đơn hàng</p>
+            </div>
+
+            {/* QR + info */}
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ background: '#fff', borderRadius: 14, padding: 12, boxShadow: '0 0 24px rgba(0,180,255,0.2)' }}>
+                <img
+                  src={vietQR(bankModal.amount, bankModal.orderCode)}
+                  alt="QR chuyển khoản"
+                  style={{ width: 200, height: 200, display: 'block', borderRadius: 8 }}
+                />
+              </div>
+
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                {[
+                  { label: 'Ngân hàng', value: BANK_SHORT, copy: false },
+                  { label: 'Số tài khoản', value: BANK_ACCOUNT, copy: true },
+                  { label: 'Chủ tài khoản', value: BANK_HOLDER, copy: false },
+                  { label: 'Số tiền', value: `${bankModal.amount.toLocaleString('vi-VN')}₫`, copy: true, raw: String(bankModal.amount) },
+                  { label: 'Nội dung CK', value: bankModal.orderCode, copy: true },
+                ].map(({ label, value, copy, raw }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)', fontSize: 13, gap: 8 }}>
+                    <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, color: label === 'Số tiền' ? 'var(--neon-blue)' : label === 'Nội dung CK' ? 'var(--success)' : 'var(--text)' }}>{value}</span>
+                      {copy && (
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(raw ?? value); setCopied(label); setTimeout(() => setCopied(null), 2000) }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: copied === label ? 'var(--success)' : 'var(--muted)', flexShrink: 0 }}
+                          title="Sao chép"
+                        >
+                          {copied === label ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.6 }}>
+                Nhập đúng <strong style={{ color: 'var(--success)' }}>nội dung chuyển khoản</strong> để đơn hàng được xác nhận tự động.
+                <br />Đơn hàng sẽ được xử lý sau khi nhận được thanh toán.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                className="btn-primary"
+                style={{ padding: '13px', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 10 }}
+                onClick={() => { setBankModal(null); navigate(`/orders/${bankModal.orderId}`) }}
+              >
+                <CheckCircle2 size={16} /> Xác nhận đã chuyển khoản
+              </button>
+              <button
+                className="btn-ghost"
+                style={{ padding: '10px', fontSize: 13, borderRadius: 10, color: 'var(--muted)' }}
+                onClick={() => { setBankModal(null); navigate('/orders') }}
+              >
+                Huỷ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

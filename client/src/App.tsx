@@ -47,6 +47,8 @@ import AdminContacts from './pages/admin/AdminContacts'
 import AdminInventory from './pages/admin/AdminInventory'
 import AdminAttributes from './pages/admin/AdminAttributes'
 import AdminSubscribers from './pages/admin/AdminSubscribers'
+import AdminPostCategories from './pages/admin/AdminPostCategories'
+import AdminRevenue from './pages/admin/AdminRevenue'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
@@ -114,6 +116,8 @@ function AppRoutes() {
                 <Route path="/admin/inventory" element={<AdminInventory />} />
                 <Route path="/admin/attributes" element={<AdminAttributes />} />
                 <Route path="/admin/subscribers" element={<AdminSubscribers />} />
+                <Route path="/admin/post-categories" element={<AdminPostCategories />} />
+                <Route path="/admin/revenue" element={<AdminRevenue />} />
               </Route>
             </Route>
             {/* 404 */}

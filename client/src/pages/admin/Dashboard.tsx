@@ -6,10 +6,20 @@ import Spinner from '../../components/Spinner'
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'var(--warning)',
+  confirmed: 'var(--neon-blue)',
   processing: 'var(--neon-blue)',
   shipped: 'var(--neon-cyan)',
   delivered: 'var(--success)',
   cancelled: 'var(--error)',
+}
+
+const STATUS_VI: Record<string, string> = {
+  pending: 'Chờ xử lý',
+  confirmed: 'Đã xác nhận',
+  processing: 'Đang xử lý',
+  shipped: 'Đang giao',
+  delivered: 'Đã giao',
+  cancelled: 'Đã huỷ',
 }
 
 export default function Dashboard() {
@@ -53,7 +63,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         {cards.map(({ icon: Icon, label, value, color, bg, to }) => (
           <Link key={label} to={to} style={{ textDecoration: 'none' }}>
             <div className="card" style={{ padding: '20px', cursor: 'pointer', transition: 'transform 150ms, box-shadow 150ms' }}
@@ -109,7 +119,7 @@ export default function Dashboard() {
                     <td style={{ padding: '12px 16px', fontWeight: 600 }}>{Number(o.final_amount).toLocaleString('vi-VN')}₫</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: `${STATUS_COLORS[o.order_status?.name ?? '']}18`, color: STATUS_COLORS[o.order_status?.name ?? ''] || 'var(--muted)', border: `1px solid ${STATUS_COLORS[o.order_status?.name ?? '']}30` }}>
-                        {o.order_status?.name ?? '—'}
+                        {STATUS_VI[o.order_status?.name ?? ''] ?? o.order_status?.name ?? '—'}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 12 }}>

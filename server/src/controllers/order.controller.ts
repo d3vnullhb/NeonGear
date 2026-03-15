@@ -6,8 +6,10 @@ import {
   listUserOrders,
   listAllOrders,
   updateOrderStatus,
+  deleteOrder,
   getOrderStatus,
   listOrderStatuses,
+  getRevenueStats,
 } from '../models/order.model'
 import { getCartWithItems, clearCart, getOrCreateCart } from '../models/cart.model'
 import { adjustInventory, addInventoryTransaction } from '../models/inventory.model'
@@ -56,11 +58,12 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       return
     }
 
-    // Validate inventory
+    // Validate inventory (use Number() to handle Prisma Decimal type from PrismaPg adapter)
     for (const item of cart.cart_items) {
       const inv = item.product_variants?.inventory
-      if (!inv || inv.quantity < item.quantity) {
-        res.status(400).json({ success: false, message: `Sản phẩm "${item.product_variants?.products?.name}" không đủ hàng` })
+      const currentQty = Number(inv?.quantity ?? 0)
+      if (currentQty < item.quantity) {
+        res.status(400).json({ success: false, message: `Sản phẩm "${item.product_variants?.products?.name}" không đủ hàng (còn ${currentQty} | yêu cầu ${item.quantity})` })
         return
       }
     }
@@ -123,6 +126,13 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       variant_info: item.product_variants?.product_attribute_values?.map((v) => `${v.attributes?.name}: ${v.value}`).join(', '),
     }))
 
+    // Deduct inventory FIRST (atomic) — prevent orphan orders
+    await Promise.all(
+      cart.cart_items.map((item) =>
+        adjustInventory(item.variant_id!, -item.quantity)
+      )
+    )
+
     const order = await createOrder({
       user_id: req.user!.user_id,
       total_amount,
@@ -138,12 +148,11 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       items,
     })
 
-    // Deduct inventory
+    // Log inventory transactions
     await Promise.all(
-      cart.cart_items.map(async (item) => {
-        await adjustInventory(item.variant_id!, -item.quantity)
-        await addInventoryTransaction({ variant_id: item.variant_id!, change_quantity: -item.quantity, transaction_type: 'export', reference_id: order.order_id, note: `Đơn hàng ${order.order_code}` })
-      })
+      cart.cart_items.map((item) =>
+        addInventoryTransaction({ variant_id: item.variant_id!, change_quantity: -item.quantity, transaction_type: 'export', reference_id: order.order_id, note: `Đơn hàng ${order.order_code}` })
+      )
     )
 
     // Record coupon usage
@@ -183,17 +192,42 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
     }
     await updateOrderStatus(order_id, cancelledStatus.status_id, 'Huỷ bởi khách hàng')
 
-    // Restore inventory
-    await Promise.all(
-      order.order_details.map(async (detail) => {
-        if (detail.variant_id) {
-          await adjustInventory(detail.variant_id, detail.quantity)
-          await addInventoryTransaction({ variant_id: detail.variant_id, change_quantity: detail.quantity, transaction_type: 'cancel_return', reference_id: order_id, note: `Hoàn kho do huỷ đơn ${order.order_code}` })
-        }
-      })
-    )
+    // Restore inventory — run independently so a logging failure doesn't block the restore
+    for (const detail of order.order_details) {
+      if (!detail.variant_id) continue
+      try {
+        await adjustInventory(detail.variant_id, detail.quantity)
+      } catch (e) {
+        console.error('[cancelOrder] adjustInventory failed for variant', detail.variant_id, e)
+      }
+      try {
+        await addInventoryTransaction({ variant_id: detail.variant_id, change_quantity: detail.quantity, transaction_type: 'import', reference_id: order_id, note: `Hoàn kho do huỷ đơn ${order.order_code}` })
+      } catch (e) {
+        console.error('[cancelOrder] addInventoryTransaction failed for variant', detail.variant_id, e)
+      }
+    }
 
     res.json({ success: true, message: 'Huỷ đơn hàng thành công' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+export const adminDeleteOrder = async (req: AuthRequest, res: Response) => {
+  try {
+    const order_id = parseInt(req.params.id as string)
+    const order = await getOrderById(order_id)
+    if (!order) {
+      res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' })
+      return
+    }
+    const statusName = order.order_status?.name
+    if (statusName !== 'cancelled' && statusName !== 'delivered') {
+      res.status(400).json({ success: false, message: 'Chỉ có thể xoá đơn đã huỷ hoặc đã giao thành công' })
+      return
+    }
+    await deleteOrder(order_id)
+    res.json({ success: true, message: 'Xoá đơn hàng thành công' })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }
@@ -227,7 +261,28 @@ export const adminUpdateOrderStatus = async (req: AuthRequest, res: Response) =>
       res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' })
       return
     }
+    const newStatus = await getOrderStatus('cancelled')
+    const isCancelling = newStatus && parseInt(status_id) === newStatus.status_id
+    const alreadyCancelledOrDelivered = order.order_status?.name === 'cancelled' || order.order_status?.name === 'delivered'
+
     await updateOrderStatus(order_id, parseInt(status_id), note)
+
+    // Restore inventory when admin cancels (and order wasn't already cancelled/delivered)
+    if (isCancelling && !alreadyCancelledOrDelivered) {
+      try {
+        await Promise.all(
+          order.order_details.map(async (detail) => {
+            if (detail.variant_id) {
+              await adjustInventory(detail.variant_id, detail.quantity)
+              await addInventoryTransaction({ variant_id: detail.variant_id, change_quantity: detail.quantity, transaction_type: 'cancel_return', reference_id: order_id, note: `Hoàn kho do admin huỷ đơn ${order.order_code}` })
+            }
+          })
+        )
+      } catch (invErr) {
+        console.error('[adminUpdateOrderStatus] restore inventory failed:', invErr)
+      }
+    }
+
     res.json({ success: true, message: 'Cập nhật trạng thái đơn hàng thành công' })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
@@ -238,6 +293,22 @@ export const getOrderStatuses = async (_req: AuthRequest, res: Response) => {
   try {
     const statuses = await listOrderStatuses()
     res.json({ success: true, message: 'Lấy trạng thái thành công', data: statuses })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+export const getRevenueStatsHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    const rawGroupBy = req.query.groupBy as string
+    const valid = ['day', 'week', 'month', 'quarter', 'year']
+    const groupBy = valid.includes(rawGroupBy) ? (rawGroupBy as 'day' | 'week' | 'month' | 'quarter' | 'year') : 'month'
+    let startDate: Date | undefined
+    let endDate: Date | undefined
+    if (req.query.startDate) { startDate = new Date(req.query.startDate as string) }
+    if (req.query.endDate) { endDate = new Date(req.query.endDate as string); endDate.setHours(23, 59, 59, 999) }
+    const data = await getRevenueStats({ groupBy, startDate, endDate })
+    res.json({ success: true, message: 'Lấy thống kê doanh thu thành công', data })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }

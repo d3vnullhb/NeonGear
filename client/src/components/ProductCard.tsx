@@ -22,7 +22,10 @@ export default function ProductCard({ product }: Props) {
   const mainImage = product.product_images?.find((img) => img.is_main) ?? product.product_images?.[0]
   const price = variant ? Number(variant.price) : 0
   const comparePrice = variant?.compare_price ? Number(variant.compare_price) : null
-  const inStock = (variant?.inventory?.quantity ?? 0) > 0
+  // has_stock = true if ANY variant has stock (from list API); fall back to default variant's quantity
+  const inStock = product.has_stock !== undefined
+    ? product.has_stock
+    : (variant?.inventory?.quantity ?? 0) > 0
   const wishlisted = isWishlisted(product.product_id)
 
   const handleAddToCart = async (e: React.MouseEvent) => {

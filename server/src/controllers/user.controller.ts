@@ -1,6 +1,6 @@
 import { Response } from 'express'
 import { AuthRequest } from '../middlewares/auth.middleware'
-import { getUserById, updateUser, listUsers, softDeleteUser, updateUserRole } from '../models/user.model'
+import { getUserById, updateUser, listUsers, softDeleteUser, updateUserRole, toggleUserLock } from '../models/user.model'
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
@@ -92,6 +92,21 @@ export const adminDeleteUser = async (req: AuthRequest, res: Response) => {
   try {
     await softDeleteUser(parseInt(req.params.id as string))
     res.json({ success: true, message: 'Xoá người dùng thành công' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+  }
+}
+
+export const adminToggleLock = async (req: AuthRequest, res: Response) => {
+  try {
+    const user_id = parseInt(req.params.id as string)
+    const { is_locked } = req.body
+    if (typeof is_locked !== 'boolean') {
+      res.status(400).json({ success: false, message: 'is_locked phải là boolean' })
+      return
+    }
+    await toggleUserLock(user_id, is_locked)
+    res.json({ success: true, message: is_locked ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản' })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
   }

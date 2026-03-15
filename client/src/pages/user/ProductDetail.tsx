@@ -251,6 +251,116 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* Reviews */}
+        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+          {/* Header + summary */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 32, marginBottom: 28, flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.2rem', marginBottom: 4 }}>
+                Đánh giá sản phẩm
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--muted)' }}>{reviews.length} đánh giá</p>
+            </div>
+            {reviews.length > 0 && (() => {
+              const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+              const dist = [5,4,3,2,1].map(star => ({
+                star,
+                count: reviews.filter(r => r.rating === star).length,
+                pct: Math.round(reviews.filter(r => r.rating === star).length / reviews.length * 100),
+              }))
+              return (
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  {/* Average big */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px 20px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)', minWidth: 90 }}>
+                    <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--warning)', lineHeight: 1, fontFamily: 'Space Grotesk' }}>{avg.toFixed(1)}</span>
+                    <div style={{ display: 'flex', gap: 2, margin: '6px 0 2px' }}>
+                      {[1,2,3,4,5].map(i => (
+                        <Star key={i} size={13} fill={i <= Math.round(avg) ? '#ffb800' : 'none'} style={{ color: '#ffb800' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 11, color: 'var(--muted)' }}>{reviews.length} đánh giá</span>
+                  </div>
+                  {/* Distribution bars */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, justifyContent: 'center' }}>
+                    {dist.map(({ star, count, pct }) => (
+                      <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12, color: 'var(--muted)', width: 14, textAlign: 'right' }}>{star}</span>
+                        <Star size={11} fill="#ffb800" style={{ color: '#ffb800', flexShrink: 0 }} />
+                        <div style={{ width: 100, height: 6, borderRadius: 4, background: 'var(--border)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: pct > 0 ? '#ffb800' : 'transparent', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', width: 24 }}>{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+
+          {reviews.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--muted)' }}>
+              <Star size={36} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.3 }} />
+              <p style={{ fontSize: 14 }}>Chưa có đánh giá nào.</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {reviews.map((r, idx) => {
+                const initials = r.users?.full_name?.[0]?.toUpperCase() ?? '?'
+                const date = r.created_at ? new Date(r.created_at) : null
+                const dateStr = date ? date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
+                return (
+                  <div key={r.review_id} style={{
+                    padding: '20px 0',
+                    borderBottom: idx < reviews.length - 1 ? '1px solid var(--border)' : 'none',
+                  }}>
+                    <div style={{ display: 'flex', gap: 14 }}>
+                      {/* Avatar */}
+                      {r.users?.avatar_url
+                        ? <img src={r.users.avatar_url} alt={r.users.full_name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,180,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: 'var(--neon-blue)', flexShrink: 0 }}>{initials}</div>}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Name + stars + date row */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+                          <div>
+                            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{r.users?.full_name}</p>
+                            <div style={{ display: 'flex', gap: 2 }}>
+                              {[1,2,3,4,5].map(i => (
+                                <Star key={i} size={13} fill={i <= r.rating ? '#ffb800' : 'none'} style={{ color: i <= r.rating ? '#ffb800' : 'var(--border)' }} />
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                            {dateStr && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{dateStr}</span>}
+                            {r.order_id && (
+                              <span style={{ fontSize: 10.5, padding: '2px 7px', borderRadius: 10, background: 'rgba(0,255,157,0.1)', color: 'var(--success)', border: '1px solid rgba(0,255,157,0.2)', fontWeight: 600 }}>
+                                Đã mua hàng
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Comment */}
+                        {r.comment && (
+                          <p style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.65, marginTop: 4 }}>{r.comment}</p>
+                        )}
+                        {/* Review images */}
+                        {r.review_images && r.review_images.length > 0 && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                            {r.review_images.map((img: any) => (
+                              <img key={img.image_id} src={img.image_url} alt={img.alt_text ?? ''} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* ── Related products ── */}
         {related.length > 0 && (
           <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
@@ -263,7 +373,7 @@ export default function ProductDetail() {
 
         {/* ── Recently viewed ── */}
         {recentlyViewed.length > 0 && (
-          <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
+          <div style={{ marginTop: '2.5rem', paddingTop: '2rem', paddingBottom: '3rem', borderTop: '1px solid var(--border)' }}>
             <h2 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.2rem', marginBottom: 20 }}>Đã xem gần đây</h2>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {recentlyViewed.map(p => (
@@ -282,33 +392,6 @@ export default function ProductDetail() {
             </div>
           </div>
         )}
-
-        {/* Reviews */}
-        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
-          <h2 className="text-xl font-bold mb-4">Đánh giá ({reviews.length})</h2>
-          {reviews.length === 0
-            ? <p style={{ color: 'var(--muted)' }}>Chưa có đánh giá nào.</p>
-            : (
-              <div className="space-y-4">
-                {reviews.map((r) => (
-                  <div key={r.review_id} className="card p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                      {r.users?.avatar_url
-                        ? <img src={r.users.avatar_url} className="w-8 h-8 rounded-full object-cover" />
-                        : <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: 'var(--surface-raised)' }}>{r.users?.full_name?.[0]}</div>}
-                      <div>
-                        <p className="text-sm font-semibold">{r.users?.full_name}</p>
-                        <div className="flex gap-0.5">
-                          {[...Array(5)].map((_, i) => <Star key={i} size={12} fill={i < r.rating ? 'var(--warning)' : 'none'} style={{ color: 'var(--warning)' }} />)}
-                        </div>
-                      </div>
-                    </div>
-                    {r.comment && <p className="text-sm" style={{ color: 'var(--muted)' }}>{r.comment}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-        </div>
       </div>
 
       {/* Lightbox */}

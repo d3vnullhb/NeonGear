@@ -35,7 +35,7 @@ const productSelect = {
   },
 }
 
-export const listProducts = (params: {
+export const listProducts = async (params: {
   page: number
   limit: number
   category_id?: number
@@ -50,7 +50,12 @@ export const listProducts = (params: {
 }) => {
   const { page, limit, category_id, brand_id, search, is_active, sort, in_stock, min_price, max_price, attribute_filters } = params
   const where: any = { deleted_at: null }
-  if (category_id) where.category_id = category_id
+  if (category_id) {
+    // Include products from child categories as well
+    const children = await prisma.categories.findMany({ where: { parent_id: category_id }, select: { category_id: true } })
+    const ids = [category_id, ...children.map(c => c.category_id)]
+    where.category_id = { in: ids }
+  }
   if (brand_id) where.brand_id = brand_id
   if (search) where.name = { contains: search, mode: 'insensitive' }
   if (is_active !== undefined) where.is_active = is_active
@@ -84,7 +89,7 @@ export const listProducts = (params: {
     default: orderBy = { created_at: 'desc' }
   }
 
-  return Promise.all([
+  const [products, total] = await Promise.all([
     prisma.products.findMany({
       where,
       skip: (page - 1) * limit,
@@ -97,11 +102,29 @@ export const listProducts = (params: {
     }),
     prisma.products.count({ where }),
   ])
+
+  // Attach has_stock: true if ANY (non-deleted) variant has inventory > 0
+  if (products.length > 0) {
+    const productIds = products.map(p => p.product_id)
+    const inStockRows = await prisma.product_variants.findMany({
+      where: { product_id: { in: productIds }, deleted_at: null, inventory: { quantity: { gt: 0 } } },
+      select: { product_id: true },
+    })
+    const inStockSet = new Set(inStockRows.map(r => r.product_id))
+    const productsWithStock = products.map(p => ({ ...p, has_stock: inStockSet.has(p.product_id) }))
+    return [productsWithStock, total] as [typeof productsWithStock, number]
+  }
+
+  return [products, total]
 }
 
 export const getProductAttributeOptions = async (category_id?: number) => {
   const productWhere: any = { deleted_at: null, is_active: true }
-  if (category_id) productWhere.category_id = category_id
+  if (category_id) {
+    const children = await prisma.categories.findMany({ where: { parent_id: category_id }, select: { category_id: true } })
+    const ids = [category_id, ...children.map(c => c.category_id)]
+    productWhere.category_id = { in: ids }
+  }
   const rows = await prisma.product_attribute_values.findMany({
     where: { product_variants: { deleted_at: null, products: productWhere } },
     select: { attribute_id: true, value: true, attributes: { select: { attribute_id: true, name: true } } },

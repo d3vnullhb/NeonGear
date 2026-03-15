@@ -3,15 +3,13 @@ import { Plus, Trash2, Edit, Image, FileText } from 'lucide-react'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
 
-const CATEGORY_LABELS: Record<string, string> = { news: 'Tin tức', review: 'Đánh giá', guide: 'Hướng dẫn', event: 'Sự kiện' }
-const CATEGORY_COLORS: Record<string, string> = { news: 'var(--neon-blue)', review: 'var(--warning)', guide: 'var(--success)', event: 'var(--neon-cyan)' }
-
 export default function AdminPosts() {
   const [posts, setPosts] = useState<any[]>([])
+  const [cats, setCats] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'create' | 'edit' | null>(null)
   const [editing, setEditing] = useState<any>(null)
-  const [form, setForm] = useState({ title: '', slug: '', content: '', excerpt: '', category: 'news', is_published: false })
+  const [form, setForm] = useState({ title: '', slug: '', content: '', excerpt: '', category: '', is_published: false })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -20,14 +18,17 @@ export default function AdminPosts() {
     api.get('/admin/posts?limit=50').then((res) => setPosts(res.data.data ?? [])).finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchPosts() }, [])
+  useEffect(() => {
+    fetchPosts()
+    api.get('/admin/post-categories').then(r => setCats(r.data.data ?? []))
+  }, [])
 
   const setSlug = (title: string) => {
     const slug = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
     setForm((f) => ({ ...f, title, slug }))
   }
 
-  const openCreate = () => { setEditing(null); setForm({ title: '', slug: '', content: '', excerpt: '', category: 'news', is_published: false }); setImageFile(null); setModal('create') }
+  const openCreate = () => { setEditing(null); setForm({ title: '', slug: '', content: '', excerpt: '', category: cats[0]?.slug ?? '', is_published: false }); setImageFile(null); setModal('create') }
   const openEdit = (p: any) => { setEditing(p); setForm({ title: p.title, slug: p.slug, content: p.content ?? '', excerpt: p.excerpt ?? '', category: p.category ?? 'news', is_published: p.is_published ?? false }); setImageFile(null); setModal('edit') }
 
   const handleSave = async () => {
@@ -102,9 +103,11 @@ export default function AdminPosts() {
                       </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 6, fontWeight: 600, background: `${CATEGORY_COLORS[p.category] ?? 'var(--muted)'}18`, color: CATEGORY_COLORS[p.category] ?? 'var(--muted)', border: `1px solid ${CATEGORY_COLORS[p.category] ?? 'var(--border)'}30` }}>
-                        {CATEGORY_LABELS[p.category] ?? p.category}
-                      </span>
+                      {(() => { const cat = cats.find(c => c.slug === p.category); const color = cat?.color ?? 'var(--muted)'; return (
+                        <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 6, fontWeight: 600, background: `${color}18`, color, border: `1px solid ${color}30` }}>
+                          {cat?.name ?? p.category}
+                        </span>
+                      )})()}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: p.is_published ? 'rgba(0,255,157,0.1)' : 'rgba(255,184,0,0.1)', color: p.is_published ? 'var(--success)' : 'var(--warning)', border: `1px solid ${p.is_published ? 'rgba(0,255,157,0.25)' : 'rgba(255,184,0,0.25)'}` }}>
@@ -147,7 +150,7 @@ export default function AdminPosts() {
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Danh mục</label>
                   <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-inset" style={{ fontSize: 13 }}>
-                    {(['news', 'review', 'guide', 'event'] as const).map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
+                    {cats.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
                   </select>
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingBottom: 10 }}>

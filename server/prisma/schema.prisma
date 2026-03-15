@@ -230,6 +230,14 @@ model posts {
   @@index([user_id], map: "idx_posts_user")
 }
 
+model post_categories {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(100)
+  slug       String    @unique @db.VarChar(100)
+  color      String?   @default("#00b4ff") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
 model product_attribute_values {
   id               Int               @id @default(autoincrement())
   variant_id       Int?
@@ -350,6 +358,7 @@ model users {
   avatar_url                          String?
   date_of_birth                       DateTime?       @db.Date
   is_verified                         Boolean?        @default(false)
+  is_locked                           Boolean?        @default(false)
   role                                String?         @default("user") @db.VarChar(20)
   last_login                          DateTime?       @db.Timestamp(6)
   created_at                          DateTime?       @default(now()) @db.Timestamp(6)

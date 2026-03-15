@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Users, Package, Tag, Bookmark, ShoppingBag,
-  Star, Ticket, FileText, MessageSquare, Warehouse, Zap, LogOut, Menu, Sliders, Home, X, ChevronRight, Mail
+  Star, Ticket, FileText, MessageSquare, Warehouse, Zap, LogOut, Menu, Sliders, Home, X, ChevronRight, Mail, Tags, BarChart2
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -16,10 +16,12 @@ const navItems = [
   { to: '/admin/reviews', icon: Star, label: 'Đánh giá' },
   { to: '/admin/coupons', icon: Ticket, label: 'Coupon' },
   { to: '/admin/posts', icon: FileText, label: 'Bài viết' },
+  { to: '/admin/post-categories', icon: Tags, label: 'Danh mục bài viết' },
   { to: '/admin/contacts', icon: MessageSquare, label: 'Liên hệ' },
   { to: '/admin/inventory', icon: Warehouse, label: 'Kho hàng' },
   { to: '/admin/attributes', icon: Sliders, label: 'Thuộc tính' },
   { to: '/admin/subscribers', icon: Mail, label: 'Đăng ký nhận tin' },
+  { to: '/admin/revenue', icon: BarChart2, label: 'Thống kê doanh thu' },
 ]
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {

@@ -63,3 +63,9 @@ export const addReviewImages = (review_id: number, images: { image_url: string; 
   prisma.review_images.createMany({
     data: images.map((img, i) => ({ ...img, review_id, sort_order: i })),
   })
+
+export const getUserReviewsByProductIds = (user_id: number, product_ids: number[]) =>
+  prisma.reviews.findMany({
+    where: { user_id, product_id: { in: product_ids }, deleted_at: null },
+    select: { review_id: true, product_id: true, rating: true, comment: true },
+  })

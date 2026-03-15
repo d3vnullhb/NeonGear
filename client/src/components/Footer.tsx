@@ -18,6 +18,7 @@ export default function Footer() {
       await api.post('/subscribers', { email: email.trim().toLowerCase() })
       setSubscribed(true)
       setEmail('')
+      setTimeout(() => setSubscribed(false), 5000)
     } catch (err: any) {
       setSubError(err?.response?.data?.message ?? 'Đăng ký thất bại, vui lòng thử lại')
     } finally {
@@ -64,7 +65,7 @@ export default function Footer() {
       }}>
         <div style={{ ...wrap, paddingTop: '1.5rem', paddingBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1.25rem' }}>
           <p className="font-bold text-sm uppercase tracking-widest" style={{ fontFamily: 'Space Grotesk', color: 'var(--text)' }}>
-            Nhận thông tin khuyến mãi từ NeonGear
+            Nhận thông tin khuyến mãi và các bài viết mới từ NeonGear
           </p>
           {subscribed ? (
             <p className="text-sm font-medium" style={{ color: 'var(--success)' }}>✓ Đăng ký thành công! Cảm ơn bạn.</p>
@@ -76,7 +77,7 @@ export default function Footer() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="Nhập email ưu đãi"
+                  placeholder="Nhập email để nhận tin tức & ưu đãi từ NeonGear"
                   required
                   className="flex-1 px-5 text-sm outline-none transition-all"
                   style={{

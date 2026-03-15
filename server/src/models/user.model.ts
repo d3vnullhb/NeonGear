@@ -50,7 +50,7 @@ export const listUsers = (page: number, limit: number, search?: string) => {
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { created_at: 'desc' },
-      select: { user_id: true, full_name: true, email: true, phone: true, role: true, is_verified: true, last_login: true, created_at: true },
+      select: { user_id: true, full_name: true, email: true, phone: true, role: true, is_verified: true, is_locked: true, last_login: true, created_at: true },
     }),
     prisma.users.count({ where }),
   ])
@@ -61,3 +61,6 @@ export const softDeleteUser = (user_id: number) =>
 
 export const updateUserRole = (user_id: number, role: string) =>
   prisma.users.update({ where: { user_id }, data: { role } })
+
+export const toggleUserLock = (user_id: number, is_locked: boolean) =>
+  prisma.users.update({ where: { user_id }, data: { is_locked } })

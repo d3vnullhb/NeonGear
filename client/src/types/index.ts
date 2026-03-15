@@ -68,6 +68,7 @@ export interface Product {
   brands?: Brand
   product_images: ProductImage[]
   product_variants?: ProductVariant | ProductVariant[]
+  has_stock?: boolean
 }
 
 export interface CartItem {
@@ -133,12 +134,13 @@ export interface Review {
   review_id: number
   product_id: number
   user_id: number
+  order_id?: number
   rating: number
   comment?: string
   is_approved?: boolean
   created_at?: string
   users?: { user_id: number; full_name: string; avatar_url?: string }
-  review_images?: { image_id: number; image_url: string }[]
+  review_images?: { image_id: number; image_url: string; alt_text?: string }[]
 }
 
 export interface Coupon {

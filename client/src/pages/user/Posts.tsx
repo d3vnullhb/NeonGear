@@ -5,6 +5,17 @@ import api from '../../lib/api'
 import type { Post } from '../../types'
 import Spinner from '../../components/Spinner'
 
+const CATEGORY_LABELS: Record<string, string> = {
+  news:    'Tin tức',
+  review:  'Đánh giá',
+  guide:   'Hướng dẫn',
+  tips:    'Mẹo hay',
+  update:  'Cập nhật',
+  event:   'Sự kiện',
+}
+
+const getCategoryLabel = (cat: string) => CATEGORY_LABELS[cat.toLowerCase()] ?? cat
+
 export default function Posts() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,7 +82,7 @@ export default function Posts() {
                 <div style={{ padding: '36px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   {posts[0].category && (
                     <span className="badge" style={{ display: 'inline-block', width: 'fit-content', marginBottom: 16, fontSize: 11 }}>
-                      {posts[0].category}
+                      {getCategoryLabel(posts[0].category)}
                     </span>
                   )}
                   <h2 style={{ fontFamily: 'Space Grotesk', fontSize: 'clamp(1.1rem, 2vw, 1.4rem)', fontWeight: 700, lineHeight: 1.35, marginBottom: 12, color: 'var(--text)', transition: 'color 200ms' }}
@@ -133,7 +144,7 @@ export default function Posts() {
                   <div style={{ padding: '20px' }}>
                     {post.category && (
                       <span className="badge" style={{ fontSize: 10, marginBottom: 10, display: 'inline-block' }}>
-                        {post.category}
+                        {getCategoryLabel(post.category)}
                       </span>
                     )}
                     <h2

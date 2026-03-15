@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2, Search, Users } from 'lucide-react'
+import { Trash2, Search, Users, LockKeyhole, LockKeyholeOpen } from 'lucide-react'
 import api from '../../lib/api'
 import type { User, Pagination } from '../../types'
 import Spinner from '../../components/Spinner'
@@ -35,6 +35,11 @@ export default function AdminUsers() {
 
   const handleRoleChange = async (id: number, role: string) => {
     await api.put(`/admin/users/${id}`, { role })
+    fetchUsers(page)
+  }
+
+  const handleToggleLock = async (id: number, currentLocked: boolean) => {
+    await api.put(`/admin/users/${id}/lock`, { is_locked: !currentLocked })
     fetchUsers(page)
   }
 
@@ -79,11 +84,16 @@ export default function AdminUsers() {
                   >
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: u.role === 'admin' ? 'rgba(0,180,255,0.2)' : 'rgba(107,107,138,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: u.role === 'admin' ? 'var(--neon-blue)' : 'var(--muted)', flexShrink: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: (u as any).is_locked ? 'rgba(255,77,106,0.15)' : u.role === 'admin' ? 'rgba(0,180,255,0.2)' : 'rgba(107,107,138,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: (u as any).is_locked ? 'var(--error)' : u.role === 'admin' ? 'var(--neon-blue)' : 'var(--muted)', flexShrink: 0 }}>
                           {u.full_name?.[0]?.toUpperCase() ?? '?'}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600 }}>{u.full_name}</div>
+                          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {u.full_name}
+                            {(u as any).is_locked && (
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'rgba(255,77,106,0.15)', color: 'var(--error)', border: '1px solid rgba(255,77,106,0.3)', letterSpacing: '0.03em' }}>Đã khóa</span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>#{u.user_id}</div>
                         </div>
                       </div>
@@ -100,7 +110,16 @@ export default function AdminUsers() {
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : ''}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button onClick={() => handleDelete(u.user_id)} title="Xoá" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button
+                          onClick={() => handleToggleLock(u.user_id, !!(u as any).is_locked)}
+                          title={(u as any).is_locked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                          style={{ width: 30, height: 30, borderRadius: 7, background: (u as any).is_locked ? 'rgba(255,184,0,0.12)' : 'rgba(107,107,138,0.1)', border: (u as any).is_locked ? '1px solid rgba(255,184,0,0.3)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: (u as any).is_locked ? 'var(--warning)' : 'var(--muted)', cursor: 'pointer' }}
+                        >
+                          {(u as any).is_locked ? <LockKeyholeOpen size={13} /> : <LockKeyhole size={13} />}
+                        </button>
+                        <button onClick={() => handleDelete(u.user_id)} title="Xoá" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
