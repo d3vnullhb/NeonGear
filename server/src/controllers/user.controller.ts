@@ -11,7 +11,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy thông tin thành công', data: user })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -27,7 +27,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     const user = await updateUser(req.user!.user_id, data)
     res.json({ success: true, message: 'Cập nhật thành công', data: user })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -41,7 +41,7 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
     const user = await updateUser(req.user!.user_id, { avatar_url: cloudinaryUrl })
     res.json({ success: true, message: 'Cập nhật avatar thành công', data: user })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -55,7 +55,7 @@ export const adminListUsers = async (req: AuthRequest, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy danh sách người dùng thành công', data: users, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -68,7 +68,7 @@ export const adminGetUser = async (req: AuthRequest, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy thông tin thành công', data: user })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -84,7 +84,7 @@ export const adminUpdateUser = async (req: AuthRequest, res: Response) => {
     const user = await updateUser(user_id, data)
     res.json({ success: true, message: 'Cập nhật thành công', data: user })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -93,7 +93,7 @@ export const adminDeleteUser = async (req: AuthRequest, res: Response) => {
     await softDeleteUser(parseInt(req.params.id as string))
     res.json({ success: true, message: 'Xoá người dùng thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -108,6 +108,6 @@ export const adminToggleLock = async (req: AuthRequest, res: Response) => {
     await toggleUserLock(user_id, is_locked)
     res.json({ success: true, message: is_locked ? 'Đã khóa tài khoản' : 'Đã mở khóa tài khoản' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

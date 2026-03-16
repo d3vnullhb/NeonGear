@@ -14,7 +14,7 @@ export const getCategories = async (_req: Request, res: Response) => {
     const categories = await listCategories()
     res.json({ success: true, message: 'Lấy danh mục thành công', data: categories })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -27,7 +27,7 @@ export const getCategoryBySlugHandler = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy danh mục thành công', data: category })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -40,7 +40,7 @@ export const adminListCategories = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy danh mục thành công', data: categories, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -55,7 +55,7 @@ export const adminCreateCategory = async (req: Request, res: Response) => {
     const category = await createCategory({ name, slug, parent_id, image_url, is_visible })
     res.status(201).json({ success: true, message: 'Tạo danh mục thành công', data: category })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -72,7 +72,7 @@ export const adminUpdateCategory = async (req: Request, res: Response) => {
     const category = await updateCategory(category_id, data)
     res.json({ success: true, message: 'Cập nhật danh mục thành công', data: category })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -87,6 +87,6 @@ export const adminDeleteCategory = async (req: Request, res: Response) => {
     await softDeleteCategory(category_id)
     res.json({ success: true, message: 'Xoá danh mục thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

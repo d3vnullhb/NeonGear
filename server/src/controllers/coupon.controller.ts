@@ -53,7 +53,7 @@ export const validateCoupon = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: true, message: 'Mã giảm giá hợp lệ', data: { coupon, discount_amount: discount } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -63,7 +63,7 @@ export const getPublicCoupons = async (_req: Request, res: Response) => {
     const coupons = await listPublicCoupons()
     res.json({ success: true, message: 'Lấy coupon thành công', data: coupons })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -76,7 +76,7 @@ export const adminListCoupons = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy coupon thành công', data: coupons, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -87,10 +87,23 @@ export const adminCreateCoupon = async (req: Request, res: Response) => {
       res.status(400).json({ success: false, message: 'code, discount_type và discount_value là bắt buộc' })
       return
     }
+    if (!['percent', 'fixed'].includes(discount_type)) {
+      res.status(400).json({ success: false, message: 'discount_type phải là "percent" hoặc "fixed"' })
+      return
+    }
+    const dv = parseFloat(discount_value)
+    if (isNaN(dv) || dv <= 0) {
+      res.status(400).json({ success: false, message: 'discount_value phải là số dương' })
+      return
+    }
+    if (discount_type === 'percent' && dv > 100) {
+      res.status(400).json({ success: false, message: 'Giảm giá theo % không được vượt quá 100' })
+      return
+    }
     const coupon = await createCoupon({
       code: code.toUpperCase(),
       discount_type,
-      discount_value: parseFloat(discount_value),
+      discount_value: dv,
       min_order_amount: min_order_amount ? parseFloat(min_order_amount) : undefined,
       max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : undefined,
       expiry_date: expiry_date ? new Date(expiry_date) : undefined,
@@ -100,7 +113,7 @@ export const adminCreateCoupon = async (req: Request, res: Response) => {
     })
     res.status(201).json({ success: true, message: 'Tạo coupon thành công', data: coupon })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -115,7 +128,7 @@ export const adminUpdateCoupon = async (req: Request, res: Response) => {
     const coupon = await updateCoupon(coupon_id, req.body)
     res.json({ success: true, message: 'Cập nhật coupon thành công', data: coupon })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -130,6 +143,6 @@ export const adminDeleteCoupon = async (req: Request, res: Response) => {
     await softDeleteCoupon(coupon_id)
     res.json({ success: true, message: 'Xoá coupon thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

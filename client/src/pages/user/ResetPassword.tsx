@@ -29,7 +29,7 @@ export default function ResetPassword() {
     e.preventDefault()
     setError('')
     if (!form.new_password) { setError('Vui lòng nhập mật khẩu mới'); return }
-    if (form.new_password.length < 6) { setError('Mật khẩu phải có ít nhất 6 ký tự'); return }
+    if (form.new_password.length < 8) { setError('Mật khẩu phải có ít nhất 8 ký tự'); return }
     if (form.new_password !== form.confirm) { setError('Mật khẩu xác nhận không khớp'); return }
     setLoading(true)
     try {
@@ -78,7 +78,7 @@ export default function ResetPassword() {
                       value={form.new_password}
                       onChange={(e) => setForm({ ...form, new_password: e.target.value })}
                       className="input-inset pr-10"
-                      placeholder="Ít nhất 6 ký tự"
+                      placeholder="Ít nhất 8 ký tự"
                       autoFocus
                     />
                     <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex' }}>

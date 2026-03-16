@@ -125,9 +125,7 @@ export default function OrderDetail() {
 
   const openReviewForm = (productId: number) => {
     setOpenReview(productId)
-    if (!forms[productId]) {
-      setForms(prev => ({ ...prev, [productId]: { rating: 5, hoverRating: 0, comment: '', submitting: false, error: '', done: false } }))
-    }
+    setForms(prev => ({ ...prev, [productId]: { rating: 5, hoverRating: 0, comment: '', submitting: false, error: '', done: false } }))
   }
 
   const updateForm = (productId: number, patch: Partial<ReviewForm>) =>

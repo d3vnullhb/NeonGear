@@ -6,7 +6,7 @@ export const getAttributes = async (_req: Request, res: Response) => {
     const attributes = await listAttributes()
     res.json({ success: true, message: 'Lấy thuộc tính thành công', data: attributes })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -20,7 +20,7 @@ export const adminCreateAttribute = async (req: Request, res: Response) => {
     const attribute = await createAttribute({ name, data_type })
     res.status(201).json({ success: true, message: 'Tạo thuộc tính thành công', data: attribute })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -35,7 +35,7 @@ export const adminUpdateAttribute = async (req: Request, res: Response) => {
     const attribute = await updateAttribute(attribute_id, req.body)
     res.json({ success: true, message: 'Cập nhật thuộc tính thành công', data: attribute })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -50,6 +50,6 @@ export const adminDeleteAttribute = async (req: Request, res: Response) => {
     await deleteAttribute(attribute_id)
     res.json({ success: true, message: 'Xoá thuộc tính thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

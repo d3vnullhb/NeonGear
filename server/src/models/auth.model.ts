@@ -1,4 +1,6 @@
 import prisma from '../config/db'
+import { randomUUID } from 'crypto'
+import bcrypt from 'bcrypt'
 
 export const findUserByEmail = (email: string) =>
   prisma.users.findFirst({
@@ -49,11 +51,12 @@ export const findOrCreateSocialUser = async (data: {
     where: { email: data.email, deleted_at: null },
   })
   if (existing) return existing
+  const password_hash = await bcrypt.hash(randomUUID(), 10)
   return prisma.users.create({
     data: {
       full_name: data.full_name,
       email: data.email,
-      password_hash: '',
+      password_hash,
       avatar_url: data.avatar_url,
     },
   })

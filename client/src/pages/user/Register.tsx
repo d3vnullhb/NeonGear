@@ -21,7 +21,7 @@ export default function Register() {
     if (!form.email.trim()) { setError('Vui lòng nhập email'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError('Email không hợp lệ'); return }
     if (!form.password) { setError('Vui lòng nhập mật khẩu'); return }
-    if (form.password.length < 6) { setError('Mật khẩu phải có ít nhất 6 ký tự'); return }
+    if (form.password.length < 8) { setError('Mật khẩu phải có ít nhất 8 ký tự'); return }
     setLoading(true)
     try {
       await register(form.full_name, form.email, form.password, form.phone || undefined)
@@ -143,7 +143,7 @@ export default function Register() {
             <div>
               <label className="block text-sm font-medium mb-1">Mật khẩu</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-inset pr-10" placeholder="Ít nhất 6 ký tự" />
+                <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input-inset pr-10" placeholder="Ít nhất 8 ký tự" />
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', display: 'flex' }}>
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>

@@ -48,7 +48,7 @@ export const getProducts = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy sản phẩm thành công', data: products, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -58,7 +58,7 @@ export const getProductFilterOptions = async (req: Request, res: Response) => {
     const data = await getProductAttributeOptions(category_id)
     res.json({ success: true, data })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -71,7 +71,7 @@ export const getProductBySlugHandler = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy sản phẩm thành công', data: product })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -87,7 +87,7 @@ export const adminListProducts = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy sản phẩm thành công', data: products, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -100,7 +100,7 @@ export const adminGetProduct = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy sản phẩm thành công', data: product })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -121,7 +121,7 @@ export const adminCreateProduct = async (req: Request, res: Response) => {
     })
     res.status(201).json({ success: true, message: 'Tạo sản phẩm thành công', data: product })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -144,7 +144,7 @@ export const adminUpdateProduct = async (req: Request, res: Response) => {
     const product = await updateProduct(product_id, data)
     res.json({ success: true, message: 'Cập nhật sản phẩm thành công', data: product })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -159,7 +159,7 @@ export const adminDeleteProduct = async (req: Request, res: Response) => {
     await softDeleteProduct(product_id)
     res.json({ success: true, message: 'Xoá sản phẩm thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -172,15 +172,25 @@ export const adminCreateVariant = async (req: Request, res: Response) => {
       res.status(400).json({ success: false, message: 'sku và price là bắt buộc' })
       return
     }
+    const parsedPrice = parseFloat(price)
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      res.status(400).json({ success: false, message: 'Giá phải là số dương' })
+      return
+    }
+    const parsedCompare = compare_price ? parseFloat(compare_price) : undefined
+    if (parsedCompare !== undefined && parsedCompare <= 0) {
+      res.status(400).json({ success: false, message: 'Giá gốc phải là số dương' })
+      return
+    }
     const image_url = (req as any).cloudinaryUrl
-    const variant = await createVariant({ product_id, sku, price: parseFloat(price), compare_price: compare_price ? parseFloat(compare_price) : undefined, image_url, is_active, is_default })
+    const variant = await createVariant({ product_id, sku, price: parsedPrice, compare_price: parsedCompare, image_url, is_active, is_default })
     const stock = initial_stock ? parseInt(initial_stock) : 0
     await upsertInventory(variant.variant_id, stock)
     if (stock > 0) await addInventoryTransaction({ variant_id: variant.variant_id, change_quantity: stock, transaction_type: 'import', note: 'Nhập kho ban đầu' })
     if (attributes && Array.isArray(attributes)) await setVariantAttributeValues(variant.variant_id, attributes)
     res.status(201).json({ success: true, message: 'Tạo variant thành công', data: variant })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -195,8 +205,16 @@ export const adminUpdateVariant = async (req: Request, res: Response) => {
     const { sku, price, compare_price, is_active, is_default, attributes } = req.body
     const data: any = {}
     if (sku) data.sku = sku
-    if (price !== undefined) data.price = parseFloat(price)
-    if (compare_price !== undefined) data.compare_price = parseFloat(compare_price)
+    if (price !== undefined) {
+      const p = parseFloat(price)
+      if (isNaN(p) || p <= 0) { res.status(400).json({ success: false, message: 'Giá phải là số dương' }); return }
+      data.price = p
+    }
+    if (compare_price !== undefined) {
+      const cp = parseFloat(compare_price)
+      if (isNaN(cp) || cp <= 0) { res.status(400).json({ success: false, message: 'Giá gốc phải là số dương' }); return }
+      data.compare_price = cp
+    }
     if (is_active !== undefined) data.is_active = is_active === 'true' || is_active === true
     if (is_default !== undefined) data.is_default = is_default === 'true' || is_default === true
     if ((req as any).cloudinaryUrl) data.image_url = (req as any).cloudinaryUrl
@@ -204,7 +222,7 @@ export const adminUpdateVariant = async (req: Request, res: Response) => {
     if (attributes && Array.isArray(attributes)) await setVariantAttributeValues(variant_id, attributes)
     res.json({ success: true, message: 'Cập nhật variant thành công', data: variant })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -219,7 +237,7 @@ export const adminDeleteVariant = async (req: Request, res: Response) => {
     await softDeleteVariant(variant_id)
     res.json({ success: true, message: 'Xoá variant thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -247,7 +265,7 @@ export const adminUploadProductImages = async (req: Request, res: Response) => {
     )
     res.status(201).json({ success: true, message: 'Upload ảnh thành công', data: images })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -262,6 +280,6 @@ export const adminDeleteProductImage = async (req: Request, res: Response) => {
     await deleteProductImage(image_id)
     res.json({ success: true, message: 'Xoá ảnh thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

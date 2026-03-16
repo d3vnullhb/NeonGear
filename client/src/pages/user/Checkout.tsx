@@ -3,18 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Lock, Truck, Zap, CreditCard, Wallet, Package, Banknote, ShieldCheck, RefreshCw, Tag, Copy, CheckCircle2 } from 'lucide-react'
 
-const BANK_ID      = '970436'        // Vietcombank
-const BANK_SHORT   = 'Vietcombank'
-const BANK_ACCOUNT = '9583849780'
-const BANK_HOLDER  = 'CAO HOAI BAO'
-
-const vietQR = (amount: number, info: string) =>
-  `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT}-compact2.png` +
-  `?amount=${amount}&addInfo=${encodeURIComponent(info)}&accountName=${encodeURIComponent(BANK_HOLDER)}`
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
+import { calcShippingFee } from '../../lib/shipping'
 
 function paymentAxios() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -120,14 +113,41 @@ export default function Checkout() {
   const [submitError, setSubmitError] = useState('')
   const [bankModal, setBankModal] = useState<{ orderId: number; orderCode: string; amount: number } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [bankInfo, setBankInfo] = useState({ bank_id: '', bank_short: '', bank_account: '', bank_holder: '' })
+
+  useEffect(() => {
+    api.get('/settings/payment').then(r => setBankInfo(r.data.data)).catch(() => {})
+  }, [])
 
   const subtotal  = cart?.cart_items.reduce((s, i) => s + Number(i.product_variants?.price ?? 0) * i.quantity, 0) ?? 0
   const discount  = couponInfo?.discount_amount ?? 0
-  const shippingFee = shippingMethod === 'express' ? 50000 : (subtotal >= 500000 ? 0 : 30000)
+  const shippingFee = calcShippingFee(subtotal, shippingMethod)
   const finalTotal = Math.max(0, subtotal - discount + shippingFee)
 
+  const [provApiDown, setProvApiDown] = useState(false)
+
   useEffect(() => {
-    fetch(`${PROVINCES_API}/p/`).then(r => r.json()).then(setProvinces).catch(() => {}).finally(() => setLoadingProv(false))
+    const CACHE_KEY = 'ng_provinces_cache'
+    const CACHE_TTL = 24 * 60 * 60 * 1000 // 24h
+    try {
+      const cached = localStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data, ts } = JSON.parse(cached)
+        if (Date.now() - ts < CACHE_TTL && Array.isArray(data) && data.length > 0) {
+          setProvinces(data)
+          setLoadingProv(false)
+          return
+        }
+      }
+    } catch {}
+    fetch(`${PROVINCES_API}/p/`)
+      .then(r => r.json())
+      .then(data => {
+        setProvinces(data)
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
+      })
+      .catch(() => setProvApiDown(true))
+      .finally(() => setLoadingProv(false))
   }, [])
 
   const onProvinceChange = (code: string, name: string) => {
@@ -136,7 +156,11 @@ export default function Checkout() {
     setFieldErrors(e => ({ ...e, province: undefined }))
     if (!code) return
     setLoadingDist(true)
-    fetch(`${PROVINCES_API}/p/${code}?depth=2`).then(r => r.json()).then(d => setDistricts(d.districts ?? [])).catch(() => {}).finally(() => setLoadingDist(false))
+    fetch(`${PROVINCES_API}/p/${code}?depth=2`)
+      .then(r => r.json())
+      .then(d => setDistricts(d.districts ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingDist(false))
   }
 
   const onDistrictChange = (code: string, name: string) => {
@@ -145,7 +169,11 @@ export default function Checkout() {
     setFieldErrors(e => ({ ...e, district: undefined }))
     if (!code) return
     setLoadingWard(true)
-    fetch(`${PROVINCES_API}/d/${code}?depth=2`).then(r => r.json()).then(d => setWards(d.wards ?? [])).catch(() => {}).finally(() => setLoadingWard(false))
+    fetch(`${PROVINCES_API}/d/${code}?depth=2`)
+      .then(r => r.json())
+      .then(d => setWards(d.wards ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingWard(false))
   }
 
   const onWardChange = (code: string, name: string) => {
@@ -275,28 +303,40 @@ export default function Checkout() {
                   style={{ opacity: 0.55, cursor: 'default' }} />
               </Field>
               <Field label="Tỉnh/Thành phố *" error={fieldErrors.province}>
-                <select className="input-inset w-full" value={addr.province_code}
-                  disabled={loadingProv}
-                  onChange={e => { const opt = provinces.find(p => String(p.code) === e.target.value); onProvinceChange(e.target.value, opt?.name ?? '') }}>
-                  <option value="">{loadingProv ? 'Đang tải...' : '-- Chọn tỉnh/thành phố --'}</option>
-                  {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-                </select>
+                {provApiDown
+                  ? <input className="input-inset w-full" placeholder="Nhập tỉnh/thành phố"
+                      value={addr.province_name}
+                      onChange={e => { setAddr(a => ({ ...a, province_name: e.target.value, province_code: 'manual' })); setFieldErrors(f => ({ ...f, province: undefined })) }} />
+                  : <select className="input-inset w-full" value={addr.province_code}
+                      disabled={loadingProv}
+                      onChange={e => { const opt = provinces.find(p => String(p.code) === e.target.value); onProvinceChange(e.target.value, opt?.name ?? '') }}>
+                      <option value="">{loadingProv ? 'Đang tải...' : '-- Chọn tỉnh/thành phố --'}</option>
+                      {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+                    </select>}
               </Field>
               <Field label="Quận/Huyện *" error={fieldErrors.district}>
-                <select className="input-inset w-full" value={addr.district_code}
-                  disabled={!addr.province_code || loadingDist}
-                  onChange={e => { const opt = districts.find(d => String(d.code) === e.target.value); onDistrictChange(e.target.value, opt?.name ?? '') }}>
-                  <option value="">{!addr.province_code ? 'Chọn tỉnh trước' : loadingDist ? 'Đang tải...' : '-- Chọn quận/huyện --'}</option>
-                  {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
-                </select>
+                {provApiDown
+                  ? <input className="input-inset w-full" placeholder="Nhập quận/huyện"
+                      value={addr.district_name}
+                      onChange={e => { setAddr(a => ({ ...a, district_name: e.target.value, district_code: 'manual' })); setFieldErrors(f => ({ ...f, district: undefined })) }} />
+                  : <select className="input-inset w-full" value={addr.district_code}
+                      disabled={!addr.province_code || loadingDist}
+                      onChange={e => { const opt = districts.find(d => String(d.code) === e.target.value); onDistrictChange(e.target.value, opt?.name ?? '') }}>
+                      <option value="">{!addr.province_code ? 'Chọn tỉnh trước' : loadingDist ? 'Đang tải...' : '-- Chọn quận/huyện --'}</option>
+                      {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
+                    </select>}
               </Field>
               <Field label="Phường/Xã *" error={fieldErrors.ward}>
-                <select className="input-inset w-full" value={addr.ward_code}
-                  disabled={!addr.district_code || loadingWard}
-                  onChange={e => { const opt = wards.find(w => String(w.code) === e.target.value); onWardChange(e.target.value, opt?.name ?? '') }}>
-                  <option value="">{!addr.district_code ? 'Chọn quận/huyện trước' : loadingWard ? 'Đang tải...' : '-- Chọn phường/xã --'}</option>
-                  {wards.map(w => <option key={w.code} value={w.code}>{w.name}</option>)}
-                </select>
+                {provApiDown
+                  ? <input className="input-inset w-full" placeholder="Nhập phường/xã"
+                      value={addr.ward_name}
+                      onChange={e => { setAddr(a => ({ ...a, ward_name: e.target.value, ward_code: 'manual' })); setFieldErrors(f => ({ ...f, ward: undefined })) }} />
+                  : <select className="input-inset w-full" value={addr.ward_code}
+                      disabled={!addr.district_code || loadingWard}
+                      onChange={e => { const opt = wards.find(w => String(w.code) === e.target.value); onWardChange(e.target.value, opt?.name ?? '') }}>
+                      <option value="">{!addr.district_code ? 'Chọn quận/huyện trước' : loadingWard ? 'Đang tải...' : '-- Chọn phường/xã --'}</option>
+                      {wards.map(w => <option key={w.code} value={w.code}>{w.name}</option>)}
+                    </select>}
               </Field>
               <div style={{ gridColumn: 'span 2' }}>
                 <Field label="Địa chỉ chi tiết *" error={fieldErrors.address_line}>
@@ -485,12 +525,11 @@ export default function Checkout() {
 
             {/* Submit button */}
             <button
-              type="submit"
-              form=""
+              type="button"
               disabled={submitting}
               className="btn-primary w-full"
               style={{ marginTop: 16, padding: '14px', fontSize: 15, fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}
-              onClick={handleSubmit as any}
+              onClick={handleSubmit}
             >
               {submitting
                 ? <><Spinner size={16} /> Đang xử lý...</>
@@ -535,7 +574,7 @@ export default function Checkout() {
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
               <div style={{ background: '#fff', borderRadius: 14, padding: 12, boxShadow: '0 0 24px rgba(0,180,255,0.2)' }}>
                 <img
-                  src={vietQR(bankModal.amount, bankModal.orderCode)}
+                  src={`https://img.vietqr.io/image/${bankInfo.bank_id}-${bankInfo.bank_account}-compact2.png?amount=${bankModal.amount}&addInfo=${encodeURIComponent(bankModal.orderCode)}&accountName=${encodeURIComponent(bankInfo.bank_holder)}`}
                   alt="QR chuyển khoản"
                   style={{ width: 200, height: 200, display: 'block', borderRadius: 8 }}
                 />
@@ -543,9 +582,9 @@ export default function Checkout() {
 
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
                 {[
-                  { label: 'Ngân hàng', value: BANK_SHORT, copy: false },
-                  { label: 'Số tài khoản', value: BANK_ACCOUNT, copy: true },
-                  { label: 'Chủ tài khoản', value: BANK_HOLDER, copy: false },
+                  { label: 'Ngân hàng', value: bankInfo.bank_short, copy: false },
+                  { label: 'Số tài khoản', value: bankInfo.bank_account, copy: true },
+                  { label: 'Chủ tài khoản', value: bankInfo.bank_holder, copy: false },
                   { label: 'Số tiền', value: `${bankModal.amount.toLocaleString('vi-VN')}₫`, copy: true, raw: String(bankModal.amount) },
                   { label: 'Nội dung CK', value: bankModal.orderCode, copy: true },
                 ].map(({ label, value, copy, raw }) => (

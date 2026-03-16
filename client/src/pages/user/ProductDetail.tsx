@@ -29,16 +29,22 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!slug) return
+    let cancelled = false
+    setLoading(true)
     api.get(`/products/${slug}`).then((res) => {
+      if (cancelled) return
       const p: Product = res.data.data
       setProduct(p)
       const variants = Array.isArray(p.product_variants) ? p.product_variants : p.product_variants ? [p.product_variants] : []
       const def = variants.find((v) => v.is_default) ?? variants[0] ?? null
       setSelectedVariant(def)
       setActiveImage(p.product_images?.[0]?.image_url ?? def?.image_url ?? null)
-      api.get(`/reviews/product/${p.product_id}`).then((r) => setReviews(r.data.data ?? [])).catch(() => {})
-    }).catch(() => navigate('/products'))
-      .finally(() => setLoading(false))
+      api.get(`/reviews/product/${p.product_id}`).then((r) => {
+        if (!cancelled) setReviews(r.data.data ?? [])
+      }).catch(() => {})
+    }).catch(() => { if (!cancelled) navigate('/products') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [slug])
 
   // allImages must be computed before this callback so the dep is not stale
@@ -83,11 +89,13 @@ export default function ProductDetail() {
       setRecentlyViewed(prev.filter(p => p.product_id !== product.product_id).slice(0, 4))
     } catch {}
     const catId = (product as any).categories?.category_id
+    let cancelled = false
     if (catId) {
       api.get(`/products?category_id=${catId}&limit=8`)
-        .then(r => setRelated((r.data.data ?? []).filter((p: Product) => p.product_id !== product.product_id).slice(0, 4)))
+        .then(r => { if (!cancelled) setRelated((r.data.data ?? []).filter((p: Product) => p.product_id !== product.product_id).slice(0, 4)) })
         .catch(() => {})
     }
+    return () => { cancelled = true }
   }, [product?.product_id])
 
   const variants = Array.isArray(product?.product_variants) ? product!.product_variants : product?.product_variants ? [product.product_variants] : []

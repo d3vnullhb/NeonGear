@@ -8,6 +8,7 @@ import UserLayout from './layouts/UserLayout'
 import AdminLayout from './layouts/AdminLayout'
 import { RequireAuth, RequireAdmin, RequireGuest } from './components/ProtectedRoute'
 import RouteScrollTop from './components/RouteScrollTop'
+import ErrorBoundary from './components/ErrorBoundary'
 
 import Home from './pages/user/Home'
 import Products from './pages/user/Products'
@@ -56,6 +57,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <RouteScrollTop />
+      <ErrorBoundary>
       <AuthProvider>
         <CartProvider>
         <WishlistProvider>
@@ -126,6 +128,7 @@ function AppRoutes() {
         </WishlistProvider>
         </CartProvider>
       </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

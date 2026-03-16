@@ -17,7 +17,7 @@ export const getCart = async (req: AuthRequest, res: Response) => {
     const cart = await getCartWithItems(req.user!.user_id)
     res.json({ success: true, message: 'Lấy giỏ hàng thành công', data: cart })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -52,7 +52,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({ success: true, message: 'Thêm vào giỏ hàng thành công', data: item })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -83,7 +83,7 @@ export const updateCartItemHandler = async (req: AuthRequest, res: Response) => 
     const updated = await updateCartItem(id, parseInt(quantity))
     res.json({ success: true, message: 'Cập nhật giỏ hàng thành công', data: updated })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -98,7 +98,7 @@ export const removeFromCart = async (req: AuthRequest, res: Response) => {
     await removeCartItem(id)
     res.json({ success: true, message: 'Xoá item khỏi giỏ hàng thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -108,6 +108,6 @@ export const clearCartHandler = async (req: AuthRequest, res: Response) => {
     await clearCart(cart.cart_id)
     res.json({ success: true, message: 'Xoá giỏ hàng thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

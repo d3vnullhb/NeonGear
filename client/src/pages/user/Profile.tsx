@@ -88,6 +88,7 @@ export default function Profile() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!pwForm.new_password || pwForm.new_password.length < 8) { setPwMsg('Mật khẩu mới phải có ít nhất 8 ký tự'); return }
     if (pwForm.new_password !== pwForm.confirm) { setPwMsg('Mật khẩu xác nhận không khớp'); return }
     setPwLoading(true)
     setPwMsg('')
@@ -105,12 +106,21 @@ export default function Profile() {
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg('Ảnh không được vượt quá 5MB')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setMsg('Chỉ chấp nhận file ảnh (JPG, PNG, WEBP...)')
+      return
+    }
     const fd = new FormData()
     fd.append('avatar', file)
     setAvatarLoading(true)
     try {
       const { data } = await api.post('/users/me/avatar', fd)
       updateUser(data.data)
+      setMsg('')
     } finally {
       setAvatarLoading(false)
     }

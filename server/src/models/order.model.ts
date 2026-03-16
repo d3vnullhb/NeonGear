@@ -1,6 +1,7 @@
 import prisma from '../config/db'
+import { randomBytes } from 'crypto'
 
-const generateOrderCode = () => `NG${Date.now().toString(36).toUpperCase()}`
+const generateOrderCode = () => `NG${randomBytes(5).toString('hex').toUpperCase()}`
 
 export const createOrder = (data: {
   user_id: number

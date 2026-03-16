@@ -10,6 +10,7 @@ import {
   findOrCreateSocialUser,
 } from '../models/auth.model'
 import { AuthRequest } from '../middlewares/auth.middleware'
+import { sendResetPasswordEmail } from '../lib/mail'
 
 const SALT_ROUNDS = 10
 
@@ -24,6 +25,11 @@ export const register = async (req: Request, res: Response) => {
 
     if (!full_name || !email || !password) {
       res.status(400).json({ success: false, message: 'full_name, email và password là bắt buộc' })
+      return
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 8 ký tự' })
       return
     }
 
@@ -44,7 +50,7 @@ export const register = async (req: Request, res: Response) => {
       data: { user, token },
     })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -86,7 +92,7 @@ export const login = async (req: Request, res: Response) => {
       data: { user: safeUser, token },
     })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -138,7 +144,7 @@ export const socialLogin = async (req: Request, res: Response) => {
 
     res.json({ success: true, message: 'Đăng nhập thành công', data: { user: safeUser, token } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -163,14 +169,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
       { expiresIn: '15m' } as jwt.SignOptions
     )
 
-    // In production: send email with reset link
-    // For now: log token (replace with nodemailer when SMTP is configured)
-    const resetUrl = `${process.env.CLIENT_URL ?? 'http://localhost:5173'}/reset-password?token=${resetToken}`
-    console.log(`[RESET PASSWORD] ${email} → ${resetUrl}`)
+    await sendResetPasswordEmail(email, resetToken)
 
     res.json({ success: true, message: 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -183,8 +186,8 @@ export const resetPassword = async (req: Request, res: Response) => {
       return
     }
 
-    if (new_password.length < 6) {
-      res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+    if (new_password.length < 8) {
+      res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
       return
     }
 
@@ -212,7 +215,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     res.json({ success: true, message: 'Đặt lại mật khẩu thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -226,8 +229,8 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       return
     }
 
-    if (new_password.length < 6) {
-      res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+    if (new_password.length < 8) {
+      res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
       return
     }
 
@@ -248,6 +251,6 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: true, message: 'Đổi mật khẩu thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

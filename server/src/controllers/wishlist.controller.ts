@@ -7,7 +7,7 @@ export const getWishlistHandler = async (req: AuthRequest, res: Response) => {
     const wishlist = await getWishlist(req.user!.user_id)
     res.json({ success: true, message: 'Lấy danh sách yêu thích thành công', data: wishlist })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -28,7 +28,7 @@ export const addToWishlistHandler = async (req: AuthRequest, res: Response) => {
     const item = await addToWishlist(req.user!.user_id, parseInt(product_id), variant_id ? parseInt(variant_id) : undefined)
     res.status(201).json({ success: true, message: 'Thêm vào yêu thích thành công', data: item })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -43,6 +43,6 @@ export const removeFromWishlistHandler = async (req: AuthRequest, res: Response)
     await removeFromWishlist(wishlist_id)
     res.json({ success: true, message: 'Xoá khỏi yêu thích thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

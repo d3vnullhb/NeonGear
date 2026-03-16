@@ -16,7 +16,7 @@ export const adminListInventory = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy tồn kho thành công', data: inventory, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -44,7 +44,7 @@ export const adminSetInventory = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Cập nhật tồn kho thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -60,7 +60,7 @@ export const adminAdjustInventory = async (req: Request, res: Response) => {
     await addInventoryTransaction({ variant_id, change_quantity: parseInt(change_quantity), transaction_type, note })
     res.json({ success: true, message: 'Điều chỉnh tồn kho thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -72,6 +72,6 @@ export const adminGetInventoryTransactions = async (req: Request, res: Response)
     const transactions = await listInventoryTransactions(variant_id, page, limit)
     res.json({ success: true, message: 'Lấy lịch sử tồn kho thành công', data: transactions })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

@@ -21,7 +21,7 @@ export const subscribe = async (req: Request, res: Response) => {
     await subscribeEmail(email.trim().toLowerCase())
     res.json({ success: true, message: 'Đăng ký nhận tin thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -36,7 +36,7 @@ export const unsubscribe = async (req: Request, res: Response) => {
     await unsubscribeEmail(email.trim().toLowerCase())
     res.json({ success: true, message: 'Đã huỷ đăng ký nhận tin' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -55,7 +55,7 @@ export const adminListSubscribers = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy danh sách thành công', data: subscribers, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -65,7 +65,7 @@ export const adminSubscriberStats = async (_req: Request, res: Response) => {
     const stats = await getSubscriberStats()
     res.json({ success: true, message: 'Lấy thống kê thành công', data: stats })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -76,7 +76,7 @@ export const adminDeleteSubscriber = async (req: Request, res: Response) => {
     await deleteSubscriber(subscriber_id)
     res.json({ success: true, message: 'Đã xoá subscriber' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -91,6 +91,6 @@ export const adminToggleSubscriber = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Cập nhật trạng thái thành công', data: updated })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

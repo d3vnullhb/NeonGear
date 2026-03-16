@@ -54,7 +54,7 @@ export const momoCreate = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: result.success, message: result.message, data: result })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -135,7 +135,7 @@ export const vnpayCreate = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: result.success, message: result.message, data: result })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -254,6 +254,6 @@ export const codConfirm = async (req: AuthRequest, res: Response) => {
       data: { orderId, status: 'pending_cod' },
     })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

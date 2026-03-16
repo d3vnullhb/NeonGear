@@ -23,7 +23,7 @@ export const getProductReviews = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy đánh giá thành công', data: reviews, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -61,7 +61,7 @@ export const createReviewHandler = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({ success: true, message: 'Tạo đánh giá thành công', data: review })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -85,7 +85,7 @@ export const updateReviewHandler = async (req: AuthRequest, res: Response) => {
     const updated = await updateReview(review_id, { rating: rating ? parseInt(rating) : undefined, comment })
     res.json({ success: true, message: 'Cập nhật đánh giá thành công', data: updated })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -104,7 +104,7 @@ export const deleteReviewHandler = async (req: AuthRequest, res: Response) => {
     await softDeleteReview(review_id)
     res.json({ success: true, message: 'Xoá đánh giá thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -116,7 +116,7 @@ export const getMyReviewsForProducts = async (req: AuthRequest, res: Response) =
     const reviews = await getUserReviewsByProductIds(req.user!.user_id, product_ids)
     res.json({ success: true, data: reviews })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -130,7 +130,7 @@ export const adminListReviews = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy đánh giá thành công', data: reviews, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -145,6 +145,6 @@ export const adminApproveReview = async (req: Request, res: Response) => {
     await approveReview(review_id)
     res.json({ success: true, message: 'Duyệt đánh giá thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

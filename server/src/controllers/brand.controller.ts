@@ -14,7 +14,7 @@ export const getBrands = async (_req: Request, res: Response) => {
     const brands = await listBrands()
     res.json({ success: true, message: 'Lấy thương hiệu thành công', data: brands })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -27,7 +27,7 @@ export const getBrandBySlugHandler = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy thương hiệu thành công', data: brand })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -40,7 +40,7 @@ export const adminListBrands = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy thương hiệu thành công', data: brands, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -55,7 +55,7 @@ export const adminCreateBrand = async (req: Request, res: Response) => {
     const brand = await createBrand({ name, slug, description, logo_url })
     res.status(201).json({ success: true, message: 'Tạo thương hiệu thành công', data: brand })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -72,7 +72,7 @@ export const adminUpdateBrand = async (req: Request, res: Response) => {
     const brand = await updateBrand(brand_id, data)
     res.json({ success: true, message: 'Cập nhật thương hiệu thành công', data: brand })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -87,6 +87,6 @@ export const adminDeleteBrand = async (req: Request, res: Response) => {
     await softDeleteBrand(brand_id)
     res.json({ success: true, message: 'Xoá thương hiệu thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

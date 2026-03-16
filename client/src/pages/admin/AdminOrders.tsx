@@ -7,6 +7,15 @@ import Spinner from '../../components/Spinner'
 
 // These must match the `name` column in the order_status table (seeded values)
 const STATUS_OPTIONS = ['pending', 'confirmed', 'shipping', 'delivered', 'cancelled']
+
+// Valid forward-only transitions per status
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  pending:   ['pending', 'confirmed', 'cancelled'],
+  confirmed: ['confirmed', 'shipping', 'cancelled'],
+  shipping:  ['shipping', 'delivered', 'cancelled'],
+  delivered: ['delivered'],
+  cancelled: ['cancelled'],
+}
 const STATUS_COLORS: Record<string, { bg: string; color: string; border: string }> = {
   pending:     { bg: 'rgba(255,184,0,0.12)',  color: 'var(--warning)',   border: 'rgba(255,184,0,0.3)'  },
   confirmed:   { bg: 'rgba(0,180,255,0.12)',  color: 'var(--neon-blue)', border: 'rgba(0,180,255,0.3)'  },
@@ -132,7 +141,7 @@ export default function AdminOrders() {
                           onChange={(e) => updateStatus(o.order_id, e.target.value)}
                           style={{ fontSize: 12, padding: '5px 10px', borderRadius: 20, background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, cursor: 'pointer', fontWeight: 600, outline: 'none' }}
                         >
-                          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                          {(ALLOWED_TRANSITIONS[o.order_status?.name ?? ''] ?? STATUS_OPTIONS).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                         </select>
                       </td>
                       <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 12.5 }}>

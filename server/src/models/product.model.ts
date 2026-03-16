@@ -115,7 +115,7 @@ export const listProducts = async (params: {
     return [productsWithStock, total] as [typeof productsWithStock, number]
   }
 
-  return [products, total]
+  return [products, total] as [typeof products, number]
 }
 
 export const getProductAttributeOptions = async (category_id?: number) => {

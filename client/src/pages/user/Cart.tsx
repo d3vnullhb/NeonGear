@@ -2,12 +2,14 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Trash2, ShoppingBag } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import Spinner from '../../components/Spinner'
+import { calcShippingFee } from '../../lib/shipping'
 
 export default function Cart() {
   const { cart, loading, updateItem, removeItem, clearCart } = useCart()
   const navigate = useNavigate()
 
   const total = cart?.cart_items.reduce((sum, item) => sum + Number(item.product_variants?.price ?? 0) * item.quantity, 0) ?? 0
+  const shipping_fee = calcShippingFee(total, 'standard')
 
   if (loading) return <div className="flex justify-center py-32"><Spinner size={48} /></div>
 
@@ -34,6 +36,7 @@ export default function Cart() {
             const variant = item.product_variants
             const price = Number(variant?.price ?? 0)
             const attrs = variant?.product_attribute_values?.map((a) => a.value).join(' / ')
+            const stock = Number(variant?.inventory?.quantity ?? 0)
 
             return (
               <div key={item.id} className="card p-4 flex gap-4">
@@ -50,7 +53,7 @@ export default function Cart() {
                     <div className="flex items-center gap-0" style={{ border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
                       <button onClick={() => item.quantity > 1 ? updateItem(item.id, item.quantity - 1) : null} disabled={item.quantity <= 1} style={{ background: 'var(--surface-raised)', border: 'none', color: item.quantity <= 1 ? 'var(--muted)' : 'var(--text)', cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', width: 28, height: 28, fontSize: 16 }}>−</button>
                       <span style={{ width: 32, textAlign: 'center', fontSize: 13, borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', lineHeight: '28px' }}>{item.quantity}</span>
-                      <button onClick={() => updateItem(item.id, item.quantity + 1)} style={{ background: 'var(--surface-raised)', border: 'none', color: 'var(--text)', cursor: 'pointer', width: 28, height: 28, fontSize: 16 }}>+</button>
+                      <button onClick={() => item.quantity < stock ? updateItem(item.id, item.quantity + 1) : null} disabled={item.quantity >= stock} style={{ background: 'var(--surface-raised)', border: 'none', color: item.quantity >= stock ? 'var(--muted)' : 'var(--text)', cursor: item.quantity >= stock ? 'not-allowed' : 'pointer', width: 28, height: 28, fontSize: 16 }}>+</button>
                     </div>
                     <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}>
                       <Trash2 size={16} />
@@ -78,12 +81,12 @@ export default function Cart() {
             </div>
             <div className="flex justify-between">
               <span style={{ color: 'var(--muted)' }}>Phí vận chuyển</span>
-              <span>30.000₫</span>
+              <span>{shipping_fee === 0 ? <span style={{ color: 'var(--success)' }}>Miễn phí</span> : `${shipping_fee.toLocaleString('vi-VN')}₫`}</span>
             </div>
           </div>
           <div className="flex justify-between font-bold text-lg pt-4 mb-6" style={{ borderTop: '1px solid var(--border)' }}>
             <span>Tổng cộng</span>
-            <span className="neon-text">{(total + 30000).toLocaleString('vi-VN')}₫</span>
+            <span className="neon-text">{(total + shipping_fee).toLocaleString('vi-VN')}₫</span>
           </div>
           <button onClick={() => navigate('/checkout')} className="btn-primary w-full py-3">Thanh toán</button>
         </div>

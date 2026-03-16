@@ -15,6 +15,7 @@ import contactRoutes from './contact.routes'
 import subscriberRoutes from './subscriber.routes'
 import postCategoryRoutes from './postCategory.routes'
 import adminRoutes from './admin'
+import settingsRoutes from './settings.routes'
 
 const router = Router()
 
@@ -34,5 +35,6 @@ router.use('/contacts', contactRoutes)
 router.use('/subscribers', subscriberRoutes)
 router.use('/post-categories', postCategoryRoutes)
 router.use('/admin', adminRoutes)
+router.use('/settings', settingsRoutes)
 
 export default router

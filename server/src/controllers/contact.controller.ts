@@ -14,7 +14,7 @@ export const submitContact = async (req: Request, res: Response) => {
     const contact = await createContact({ user_id, full_name, email, phone, subject, message })
     res.status(201).json({ success: true, message: 'Gửi liên hệ thành công', data: contact })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -28,7 +28,7 @@ export const adminListContacts = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy liên hệ thành công', data: contacts, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -48,6 +48,6 @@ export const adminReplyContact = async (req: AuthRequest, res: Response) => {
     const contact = await replyContact(contact_id, req.user!.user_id, reply)
     res.json({ success: true, message: 'Trả lời liên hệ thành công', data: contact })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }

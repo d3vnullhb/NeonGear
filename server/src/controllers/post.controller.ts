@@ -19,7 +19,7 @@ export const getPosts = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy bài viết thành công', data: posts, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -32,7 +32,7 @@ export const getPostBySlugHandler = async (req: Request, res: Response) => {
     }
     res.json({ success: true, message: 'Lấy bài viết thành công', data: post })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -45,7 +45,7 @@ export const adminListPosts = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(total / limit)
     res.json({ success: true, message: 'Lấy bài viết thành công', data: posts, pagination: { total, totalPages, page, limit } })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -71,7 +71,7 @@ export const adminCreatePost = async (req: AuthRequest, res: Response) => {
     })
     res.status(201).json({ success: true, message: 'Tạo bài viết thành công', data: post })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -94,7 +94,7 @@ export const adminUpdatePost = async (req: Request, res: Response) => {
     const post = await updatePost(post_id, data)
     res.json({ success: true, message: 'Cập nhật bài viết thành công', data: post })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
 
@@ -109,6 +109,6 @@ export const adminDeletePost = async (req: Request, res: Response) => {
     await softDeletePost(post_id)
     res.json({ success: true, message: 'Xoá bài viết thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error] })
+    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
   }
 }
