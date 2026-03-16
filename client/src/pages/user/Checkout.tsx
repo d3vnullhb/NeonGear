@@ -12,7 +12,7 @@ import { calcShippingFee } from '../../lib/shipping'
 function paymentAxios() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return axios.create({
-    baseURL: '/api/payment',
+    baseURL: (import.meta.env.VITE_API_URL ?? '') + '/api/payment',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
 }
