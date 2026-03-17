@@ -27,7 +27,7 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      api.get('/products?limit=8'),
+      api.get('/products?limit=10'),
       api.get('/categories'),
     ]).then(([pRes, cRes]) => {
       setProducts(pRes.data.data ?? [])
