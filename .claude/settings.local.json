@@ -26,7 +26,11 @@
       "Bash(where pandoc:*)",
       "Bash(where soffice:*)",
       "Bash(PGPASSWORD=123456 psql -h localhost -U postgres -d neongear -c \"SELECT COUNT\\(*\\) as total, COUNT\\(CASE WHEN deleted_at IS NOT NULL THEN 1 END\\) as soft_deleted, COUNT\\(CASE WHEN is_active = false THEN 1 END\\) as inactive FROM products;\")",
-      "Bash(pkill -f \"tsx src/app.ts\")"
+      "Bash(pkill -f \"tsx src/app.ts\")",
+      "Bash(python3 -c \"import docx; print\\(''ok''\\)\")",
+      "Bash(pip install:*)",
+      "Bash(python gen_tables.py)",
+      "Bash(python -c \":*)"
     ]
   }
 }
