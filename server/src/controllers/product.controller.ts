@@ -36,7 +36,8 @@ export const getProducts = async (req: Request, res: Response) => {
       if (key.startsWith('attr_')) {
         const attrId = parseInt(key.replace('attr_', ''))
         if (!isNaN(attrId) && typeof val === 'string' && val) {
-          attribute_filters.push({ attribute_id: attrId, values: val.split(',') })
+          const values = val.split(',').slice(0, 20) // tối đa 20 values/attribute
+          attribute_filters.push({ attribute_id: attrId, values })
         }
       }
     }

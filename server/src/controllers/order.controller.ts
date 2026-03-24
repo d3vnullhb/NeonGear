@@ -32,7 +32,9 @@ export const getUserOrders = async (req: AuthRequest, res: Response) => {
 
 export const getOrderByIdHandler = async (req: AuthRequest, res: Response) => {
   try {
-    const order = await getOrderById(parseInt(req.params.id as string))
+    const id = parseInt(req.params.id as string)
+    if (isNaN(id)) { res.status(400).json({ success: false, message: 'ID không hợp lệ' }); return }
+    const order = await getOrderById(id)
     if (!order) {
       res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' })
       return
@@ -190,31 +192,42 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     await clearCart(cart.cart_id)
 
     // Send confirmation email — fire and forget
-    findUserById(req.user!.user_id).then((u) => {
-      if (!u?.email) return
-      return sendOrderConfirmationEmail(u.email, {
-        order_code: order.order_code,
-        final_amount: Number(order.final_amount),
-        shipping_address: order.shipping_address,
-        items: order.order_details.map((d) => ({
-          product_name: d.product_name,
-          quantity: d.quantity,
-          price: Number(d.price),
-        })),
-      })
-    }).catch((e) => console.error('[mail] order confirmation failed — order:', order.order_code, '—', e?.message ?? e))
+    ;(async () => {
+      try {
+        const u = await findUserById(req.user!.user_id)
+        if (!u?.email) return
+        await sendOrderConfirmationEmail(u.email, {
+          order_code: order.order_code,
+          final_amount: Number(order.final_amount),
+          shipping_address: order.shipping_address,
+          items: order.order_details.map((d) => ({
+            product_name: d.product_name,
+            quantity: d.quantity,
+            price: Number(d.price),
+          })),
+        })
+      } catch (e: any) {
+        console.error('[mail] order confirmation failed — order:', order.order_code, '—', e?.message ?? e)
+      }
+    })()
 
     res.status(201).json({ success: true, message: 'Đặt hàng thành công', data: order })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[placeOrder]', msg)
-    res.status(500).json({ success: false, message: `Lỗi server: ${msg}` })
+    // Expose only known business errors (inventory), not raw DB errors
+    const isBusinessError = msg.includes('không đủ tồn kho')
+    res.status(isBusinessError ? 400 : 500).json({
+      success: false,
+      message: isBusinessError ? msg : 'Đặt hàng thất bại, vui lòng thử lại',
+    })
   }
 }
 
 export const cancelOrder = async (req: AuthRequest, res: Response) => {
   try {
     const order_id = parseInt(req.params.id as string)
+    if (isNaN(order_id)) { res.status(400).json({ success: false, message: 'ID không hợp lệ' }); return }
     const order = await getOrderById(order_id)
     if (!order) {
       res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' })
@@ -260,6 +273,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 export const adminDeleteOrder = async (req: AuthRequest, res: Response) => {
   try {
     const order_id = parseInt(req.params.id as string)
+    if (isNaN(order_id)) { res.status(400).json({ success: false, message: 'ID không hợp lệ' }); return }
     const order = await getOrderById(order_id)
     if (!order) {
       res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' })
@@ -295,6 +309,7 @@ export const adminListOrders = async (req: AuthRequest, res: Response) => {
 export const adminUpdateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     const order_id = parseInt(req.params.id as string)
+    if (isNaN(order_id)) { res.status(400).json({ success: false, message: 'ID không hợp lệ' }); return }
     const { status_id, note } = req.body
     if (!status_id) {
       res.status(400).json({ success: false, message: 'status_id là bắt buộc' })

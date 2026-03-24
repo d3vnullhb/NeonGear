@@ -92,10 +92,10 @@ export default function PaymentResult() {
               </Link>
             ) : (
               <Link
-                to="/checkout"
+                to={orderId ? `/orders/${orderId}` : '/orders'}
                 className="btn-primary w-full py-3 flex items-center justify-center gap-2"
               >
-                Thử lại <ArrowRight size={16} />
+                Xem đơn hàng <ArrowRight size={16} />
               </Link>
             )}
             <Link

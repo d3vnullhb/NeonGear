@@ -3,8 +3,49 @@ import { AuthRequest } from '../middlewares/auth.middleware'
 import { getOrderById, getOrderStatus, updateOrderStatus } from '../models/order.model'
 import { createMoMoPayment, verifyMoMoSignature, parseMomoOrderId } from '../services/payment/momo.service'
 import { createVNPayPayment, verifyVNPaySignature, parseVnpayOrderId } from '../services/payment/vnpay.service'
+import prisma from '../config/db'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Khi thanh toán online thất bại: hoàn kho + cập nhật status = 'failed' trong 1 transaction.
+ * Dùng transaction để đảm bảo idempotency — nếu cả vnpayReturn và vnpayIPN cùng gọi,
+ * chỉ handler đầu tiên thực hiện (handler sau thấy status != 'pending' thì bỏ qua).
+ */
+async function handlePaymentFailure(orderId: number, note: string) {
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.orders.findUnique({
+      where: { order_id: orderId },
+      include: { order_status: true, order_details: true },
+    })
+    // Chỉ xử lý nếu đơn đang ở trạng thái 'pending' (chưa được xử lý bởi handler khác)
+    if (!order || order.order_status?.name !== 'pending') return
+
+    const failedStatus = await tx.order_status.findUnique({ where: { name: 'failed' } })
+    if (!failedStatus) return
+
+    await tx.orders.update({ where: { order_id: orderId }, data: { status_id: failedStatus.status_id } })
+    await tx.order_status_history.create({ data: { order_id: orderId, status_id: failedStatus.status_id, note } })
+
+    // Hoàn kho cho tất cả items
+    for (const detail of order.order_details) {
+      if (!detail.variant_id) continue
+      await tx.$executeRaw`
+        UPDATE inventory SET quantity = quantity + ${detail.quantity}, updated_at = NOW()
+        WHERE variant_id = ${detail.variant_id}
+      `
+      await tx.inventory_transactions.create({
+        data: {
+          variant_id: detail.variant_id,
+          change_quantity: detail.quantity,
+          transaction_type: 'cancel_return',
+          reference_id: orderId,
+          note: `Hoàn kho do thanh toán thất bại`,
+        },
+      })
+    }
+  })
+}
 
 async function resolveStatus(name: string) {
   const s = await getOrderStatus(name)
@@ -124,6 +165,10 @@ export const vnpayCreate = async (req: AuthRequest, res: Response) => {
       res.status(403).json({ success: false, message: 'Forbidden' })
       return
     }
+    if (Math.round(Number(amount)) !== Math.round(Number(order.final_amount))) {
+      res.status(400).json({ success: false, message: 'Số tiền không khớp với đơn hàng' })
+      return
+    }
 
     const ipAddr = getClientIp(req)
     const result = createVNPayPayment(
@@ -160,10 +205,13 @@ export const vnpayReturn = async (req: Request, res: Response) => {
     }
 
     const isSuccess = query.vnp_ResponseCode === '00'
-    const statusName = isSuccess ? 'paid' : 'failed'
-    const status = await resolveStatus(statusName)
 
-    await updateOrderStatus(orderId, status.status_id, `VNPay return — code: ${query.vnp_ResponseCode}`)
+    if (isSuccess) {
+      const status = await resolveStatus('paid')
+      await updateOrderStatus(orderId, status.status_id, `VNPay return — code: ${query.vnp_ResponseCode}`)
+    } else {
+      await handlePaymentFailure(orderId, `VNPay return — code: ${query.vnp_ResponseCode}`)
+    }
 
     const params = new URLSearchParams({
       success: String(isSuccess),
@@ -203,17 +251,20 @@ export const vnpayIPN = async (req: Request, res: Response) => {
       return
     }
 
-    const vnpAmount = parseInt(query.vnp_Amount) / 100
-    if (vnpAmount !== Number(order.final_amount)) {
+    const vnpAmount = Math.round(parseInt(query.vnp_Amount))
+    if (vnpAmount !== Math.round(Number(order.final_amount) * 100)) {
       res.json({ RspCode: '04', Message: 'Invalid amount' })
       return
     }
 
     const isSuccess = query.vnp_ResponseCode === '00'
-    const statusName = isSuccess ? 'paid' : 'failed'
-    const status = await resolveStatus(statusName)
 
-    await updateOrderStatus(orderId, status.status_id, `VNPay IPN — code: ${query.vnp_ResponseCode}`)
+    if (isSuccess) {
+      const status = await resolveStatus('paid')
+      await updateOrderStatus(orderId, status.status_id, `VNPay IPN — code: ${query.vnp_ResponseCode}`)
+    } else {
+      await handlePaymentFailure(orderId, `VNPay IPN — code: ${query.vnp_ResponseCode}`)
+    }
 
     // VNPay expects this exact response shape
     res.json({ RspCode: '00', Message: 'Confirm success' })

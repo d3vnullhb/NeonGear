@@ -1,6 +1,7 @@
 import { Response } from 'express'
 import { AuthRequest } from '../middlewares/auth.middleware'
 import { getWishlist, getWishlistItem, addToWishlist, removeFromWishlist, getWishlistById } from '../models/wishlist.model'
+import { getProductById } from '../models/product.model'
 
 export const getWishlistHandler = async (req: AuthRequest, res: Response) => {
   try {
@@ -16,6 +17,12 @@ export const addToWishlistHandler = async (req: AuthRequest, res: Response) => {
     const { product_id, variant_id } = req.body
     if (!product_id) {
       res.status(400).json({ success: false, message: 'product_id là bắt buộc' })
+      return
+    }
+
+    const product = await getProductById(parseInt(product_id))
+    if (!product) {
+      res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' })
       return
     }
 

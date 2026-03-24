@@ -57,7 +57,7 @@ export default function ProductCard({ product }: Props) {
   }
 
   return (
-    <Link to={`/products/${product.slug}`} className="group block card overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ boxShadow: '6px 6px 12px #06060c, -6px -6px 12px #1e1e2e' }}>
+    <Link to={`/products/${product.slug}`} className="group flex flex-col card overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ boxShadow: '6px 6px 12px #06060c, -6px -6px 12px #1e1e2e' }}>
       {/* Image */}
       <div className="relative aspect-square overflow-hidden" style={{ background: 'var(--surface-raised)' }}>
         {mainImage ? (
@@ -97,9 +97,9 @@ export default function ProductCard({ product }: Props) {
       </div>
 
       {/* Info */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-1">
         {product.brands && <p className="text-xs font-medium mb-1" style={{ color: 'var(--neon-blue)', letterSpacing: '0.02em' }}>{product.brands.name}</p>}
-        <h3 className="font-semibold text-[15px] mb-2.5 line-clamp-2 leading-snug">{product.name}</h3>
+        <h3 className="font-semibold text-[15px] mb-2.5 line-clamp-2 leading-snug flex-1">{product.name}</h3>
 
         <div className="flex items-baseline gap-2 mb-3">
           <span className="font-bold text-base neon-text">{price.toLocaleString('vi-VN')}₫</span>

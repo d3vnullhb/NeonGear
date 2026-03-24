@@ -16,7 +16,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 // ── Security headers ──────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }))
+app.use(helmet())
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }))
