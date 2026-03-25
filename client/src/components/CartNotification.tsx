@@ -50,7 +50,9 @@ export default function CartNotification() {
         }}>
           <CheckCircle size={15} style={{ color: 'var(--success)', flexShrink: 0 }} />
           <span style={{ color: 'var(--success)', fontSize: 13, fontWeight: 600, flex: 1 }}>
-            Đã thêm vào giỏ hàng!
+            {justAdded && (justAdded.cartQuantity ?? 1) > 1
+              ? `Đã cập nhật giỏ hàng (×${justAdded.cartQuantity})`
+              : 'Đã thêm vào giỏ hàng!'}
           </span>
           <button
             onClick={dismissCart}

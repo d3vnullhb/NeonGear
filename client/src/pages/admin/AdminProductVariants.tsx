@@ -119,8 +119,12 @@ export default function AdminProductVariants() {
 
   const handleDelete = async (variantId: number) => {
     if (!confirm('Xoá biến thể này?')) return
-    await api.delete(`/admin/products/${id}/variants/${variantId}`)
-    fetchData()
+    try {
+      await api.delete(`/admin/products/${id}/variants/${variantId}`)
+      fetchData()
+    } catch (err: any) {
+      alert(err.response?.data?.message ?? 'Xoá thất bại')
+    }
   }
 
   const setAttrValue = (attribute_id: string, value: string) => {
@@ -204,7 +208,7 @@ export default function AdminProductVariants() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: v.is_active ? 'rgba(0,255,157,0.1)' : 'rgba(255,77,106,0.1)', color: v.is_active ? 'var(--success)' : 'var(--error)', border: `1px solid ${v.is_active ? 'rgba(0,255,157,0.25)' : 'rgba(255,77,106,0.25)'}` }}>
-                        {v.is_active ? 'Active' : 'Inactive'}
+                        {v.is_active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
@@ -280,7 +284,7 @@ export default function AdminProductVariants() {
               <div style={{ display: 'flex', gap: 20 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />
-                  <span style={{ fontSize: 13 }}>Active</span>
+                  <span style={{ fontSize: 13 }}>Hiển thị biến thể</span>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />

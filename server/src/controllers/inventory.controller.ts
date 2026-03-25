@@ -56,8 +56,23 @@ export const adminAdjustInventory = async (req: Request, res: Response) => {
       res.status(400).json({ success: false, message: 'change_quantity và transaction_type là bắt buộc' })
       return
     }
-    await adjustInventory(variant_id, parseInt(change_quantity))
-    await addInventoryTransaction({ variant_id, change_quantity: parseInt(change_quantity), transaction_type, note })
+    const delta = parseInt(change_quantity)
+    if (delta < 0) {
+      const current = await getInventoryByVariant(variant_id)
+      const currentQty = current?.quantity ?? 0
+      if (currentQty + delta < 0) {
+        res.status(400).json({ success: false, message: `Không thể giảm tồn kho xuống âm (hiện tại: ${currentQty})` })
+        return
+      }
+    }
+    try {
+      await adjustInventory(variant_id, delta)
+    } catch (stockError) {
+      const msg = stockError instanceof Error ? stockError.message : String(stockError)
+      res.status(400).json({ success: false, message: msg })
+      return
+    }
+    await addInventoryTransaction({ variant_id, change_quantity: delta, transaction_type, note })
     res.json({ success: true, message: 'Điều chỉnh tồn kho thành công' })
   } catch (error) {
     res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })

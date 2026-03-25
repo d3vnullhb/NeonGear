@@ -14,6 +14,65 @@ interface VariantEntry {
   imageFile: File | null
 }
 
+// Định nghĩa NGOÀI component để tránh re-mount mỗi khi parent re-render → input mất focus
+function VariantFields({ base_price, promo_price, sku, initial_stock, attrValues, imageFile: vImg, onChange, onAttrChange, onImageChange, attributes }: {
+  base_price: string; promo_price: string; sku: string; initial_stock: string
+  attrValues: { attribute_id: string; value: string }[]
+  imageFile: File | null
+  attributes: { attribute_id: number; name: string }[]
+  onChange: (patch: { base_price?: string; promo_price?: string; sku?: string; initial_stock?: string }) => void
+  onAttrChange: (attrId: string, value: string) => void
+  onImageChange: (file: File | null) => void
+}) {
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>SKU *</label>
+          <input value={sku} onChange={(e) => onChange({ sku: e.target.value })} className="input-inset" style={{ fontSize: 13, fontFamily: 'monospace' }} placeholder="NG-KB001-BLK" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Tồn kho</label>
+          <input type="number" min="0" value={initial_stock} onChange={(e) => onChange({ initial_stock: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Giá gốc *</label>
+          <input type="number" min="0" value={base_price} onChange={(e) => onChange({ base_price: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="1200000" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Giá khuyến mãi <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(tùy chọn)</span></label>
+          <input type="number" min="0" value={promo_price} onChange={(e) => onChange({ promo_price: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="990000" />
+        </div>
+      </div>
+      <div style={{ marginBottom: attributes.length > 0 ? 10 : 0 }}>
+        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Ảnh phiên bản</label>
+        <div style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: '10px 12px', background: 'rgba(0,0,0,0.15)' }}>
+          <input type="file" accept="image/*" onChange={(e) => onImageChange(e.target.files?.[0] ?? null)} style={{ fontSize: 12, color: 'var(--muted)', width: '100%' }} />
+          {vImg && <p style={{ fontSize: 11.5, marginTop: 6, color: 'var(--success)' }}>✓ {vImg.name}</p>}
+        </div>
+      </div>
+      {attributes.length > 0 && (
+        <div>
+          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>Thuộc tính</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {attrValues.map((a) => {
+              const attr = attributes.find((x) => String(x.attribute_id) === a.attribute_id)
+              return (
+                <div key={a.attribute_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 12.5, width: 90, flexShrink: 0, color: 'var(--muted)', fontWeight: 500 }}>{attr?.name}</span>
+                  <input value={a.value} onChange={(e) => onAttrChange(a.attribute_id, e.target.value)} className="input-inset" style={{ fontSize: 13, flex: 1 }} placeholder={`Giá trị ${attr?.name}`} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // Transform form values → DB fields
 function toDbPrice(base: string, promo: string) {
   return {
@@ -66,9 +125,10 @@ export default function AdminProducts() {
     imageFile: null,
   })
 
-  const fetchProducts = () => {
+  const fetchProducts = (pageOverride?: number) => {
+    const p = pageOverride ?? page
     setLoading(true)
-    api.get(`/admin/products?page=${page}&limit=20${search ? `&search=${search}` : ''}`).then((res) => {
+    api.get(`/admin/products?page=${p}&limit=20${search ? `&search=${search}` : ''}`).then((res) => {
       setProducts(res.data.data ?? [])
       setPagination(res.data.pagination)
     }).finally(() => setLoading(false))
@@ -214,61 +274,6 @@ export default function AdminProducts() {
     setForm((f) => ({ ...f, name, slug }))
   }
 
-  // Reusable variant fields (used in both create cards and edit section)
-  const VariantFields = ({ base_price, promo_price, sku, initial_stock, attrValues, imageFile: vImg, onChange, onAttrChange, onImageChange }: {
-    base_price: string; promo_price: string; sku: string; initial_stock: string
-    attrValues: { attribute_id: string; value: string }[]
-    imageFile: File | null
-    onChange: (patch: { base_price?: string; promo_price?: string; sku?: string; initial_stock?: string }) => void
-    onAttrChange: (attrId: string, value: string) => void
-    onImageChange: (file: File | null) => void
-  }) => (
-    <>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <div>
-          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>SKU *</label>
-          <input value={sku} onChange={(e) => onChange({ sku: e.target.value })} className="input-inset" style={{ fontSize: 13, fontFamily: 'monospace' }} placeholder="NG-KB001-BLK" />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Tồn kho</label>
-          <input type="number" min="0" value={initial_stock} onChange={(e) => onChange({ initial_stock: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <div>
-          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Giá gốc *</label>
-          <input type="number" min="0" value={base_price} onChange={(e) => onChange({ base_price: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="1200000" />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Giá khuyến mãi <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(tùy chọn)</span></label>
-          <input type="number" min="0" value={promo_price} onChange={(e) => onChange({ promo_price: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="990000" />
-        </div>
-      </div>
-      <div style={{ marginBottom: attributes.length > 0 ? 10 : 0 }}>
-        <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 5 }}>Ảnh phiên bản</label>
-        <div style={{ border: '1px dashed var(--border)', borderRadius: 8, padding: '10px 12px', background: 'rgba(0,0,0,0.15)' }}>
-          <input type="file" accept="image/*" onChange={(e) => onImageChange(e.target.files?.[0] ?? null)} style={{ fontSize: 12, color: 'var(--muted)', width: '100%' }} />
-          {vImg && <p style={{ fontSize: 11.5, marginTop: 6, color: 'var(--success)' }}>✓ {vImg.name}</p>}
-        </div>
-      </div>
-      {attributes.length > 0 && (
-        <div>
-          <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>Thuộc tính</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {attrValues.map((a) => {
-              const attr = attributes.find((x) => String(x.attribute_id) === a.attribute_id)
-              return (
-                <div key={a.attribute_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 12.5, width: 90, flexShrink: 0, color: 'var(--muted)', fontWeight: 500 }}>{attr?.name}</span>
-                  <input value={a.value} onChange={(e) => onAttrChange(a.attribute_id, e.target.value)} className="input-inset" style={{ fontSize: 13, flex: 1 }} placeholder={`Giá trị ${attr?.name}`} />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </>
-  )
 
   return (
     <div>
@@ -281,7 +286,7 @@ export default function AdminProducts() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--surface-raised)', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
             <Search size={14} style={{ color: 'var(--muted)' }} />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchProducts()} placeholder="Tìm sản phẩm..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text)', width: 180 }} />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { if (page === 1) fetchProducts(1); else setPage(1) } }} placeholder="Tìm sản phẩm..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--text)', width: 180 }} />
           </div>
           <button onClick={openCreate} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13 }}>
             <Plus size={15} /> Thêm sản phẩm
@@ -335,7 +340,7 @@ export default function AdminProducts() {
                       <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 13 }}>{p.brands?.name ?? '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: p.is_active ? 'rgba(0,255,157,0.1)' : 'rgba(255,77,106,0.1)', color: p.is_active ? 'var(--success)' : 'var(--error)', border: `1px solid ${p.is_active ? 'rgba(0,255,157,0.25)' : 'rgba(255,77,106,0.25)'}` }}>
-                          {p.is_active ? 'Active' : 'Inactive'}
+                          {p.is_active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
@@ -425,7 +430,7 @@ export default function AdminProducts() {
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />
-                <span style={{ fontSize: 13 }}>Hiển thị sản phẩm (Active)</span>
+                <span style={{ fontSize: 13 }}>Hiển thị sản phẩm</span>
               </label>
 
               {/* ── CREATE: variant entries ── */}
@@ -456,6 +461,7 @@ export default function AdminProducts() {
                         </div>
                         <VariantFields
                           {...v}
+                          attributes={attributes}
                           onChange={(patch) => updateEntry(i, patch)}
                           onAttrChange={(attrId, value) => updateEntryAttr(i, attrId, value)}
                           onImageChange={(file) => updateEntry(i, { imageFile: file })}
@@ -482,6 +488,7 @@ export default function AdminProducts() {
                         initial_stock={editVariant.initial_stock}
                         attrValues={editAttrValues}
                         imageFile={null}
+                        attributes={attributes}
                         onChange={(patch) => setEditVariant((v) => ({ ...v, ...patch }))}
                         onAttrChange={(attrId, value) => setEditAttrValues((prev) => prev.map((a) => a.attribute_id === attrId ? { ...a, value } : a))}
                         onImageChange={() => {}}

@@ -66,7 +66,11 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchOrders() }, [page, statusFilter])
 
-  const updateStatus = async (orderId: number, statusName: string) => {
+  const updateStatus = async (orderId: number, statusName: string, currentStatus?: string) => {
+    if (currentStatus === 'paid' && statusName === 'cancelled') {
+      const ok = window.confirm('Đơn hàng này đã được thanh toán.\nBạn cần hoàn tiền thủ công cho khách hàng sau khi huỷ.\n\nTiếp tục huỷ đơn?')
+      if (!ok) return
+    }
     const status = orderStatuses.find((s) => s.name === statusName)
     if (!status) return
     await api.put(`/admin/orders/${orderId}/status`, { status_id: status.status_id })
@@ -138,7 +142,7 @@ export default function AdminOrders() {
                       <td style={{ padding: '12px 16px' }}>
                         <select
                           value={o.order_status?.name ?? ''}
-                          onChange={(e) => updateStatus(o.order_id, e.target.value)}
+                          onChange={(e) => updateStatus(o.order_id, e.target.value, o.order_status?.name)}
                           style={{ fontSize: 12, padding: '5px 10px', borderRadius: 20, background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, cursor: 'pointer', fontWeight: 600, outline: 'none' }}
                         >
                           {(ALLOWED_TRANSITIONS[o.order_status?.name ?? ''] ?? STATUS_OPTIONS).map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Plus, Trash2, Edit, Bookmark } from 'lucide-react'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
@@ -11,9 +11,15 @@ export default function AdminBrands() {
   const [form, setForm] = useState({ name: '', slug: '', description: '' })
   const [saving, setSaving] = useState(false)
 
+  const mountedRef = useRef(true)
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
+
   const fetchBrands = () => {
     setLoading(true)
-    api.get('/admin/brands?limit=100').then((res) => setBrands(res.data.data ?? [])).finally(() => setLoading(false))
+    api.get('/admin/brands?limit=100')
+      .then(res => { if (mountedRef.current) setBrands(res.data.data ?? []) })
+      .catch(() => {})
+      .finally(() => { if (mountedRef.current) setLoading(false) })
   }
 
   useEffect(() => { fetchBrands() }, [])
@@ -41,8 +47,12 @@ export default function AdminBrands() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Xoá thương hiệu này?')) return
-    await api.delete(`/admin/brands/${id}`)
-    fetchBrands()
+    try {
+      await api.delete(`/admin/brands/${id}`)
+      fetchBrands()
+    } catch (err: any) {
+      alert(err.response?.data?.message ?? 'Xoá thất bại')
+    }
   }
 
   return (
@@ -120,15 +130,15 @@ export default function AdminBrands() {
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Tên thương hiệu *</label>
-                <input value={form.name} onChange={(e) => setSlug(e.target.value)} className="input-inset" style={{ fontSize: 13 }} autoFocus />
+                <input value={form.name} onChange={(e) => setSlug(e.target.value)} className="input-inset w-full" style={{ fontSize: 13 }} autoFocus />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Slug *</label>
-                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
+                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Mô tả</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-inset" style={{ fontSize: 13 }} rows={3} />
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} rows={3} />
               </div>
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>

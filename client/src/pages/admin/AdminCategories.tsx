@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Plus, Trash2, Edit, Tag } from 'lucide-react'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
@@ -11,9 +11,15 @@ export default function AdminCategories() {
   const [form, setForm] = useState({ name: '', slug: '', is_visible: true })
   const [saving, setSaving] = useState(false)
 
+  const mountedRef = useRef(true)
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false } }, [])
+
   const fetchCategories = () => {
     setLoading(true)
-    api.get('/admin/categories?limit=100').then((res) => setCategories(res.data.data ?? [])).finally(() => setLoading(false))
+    api.get('/admin/categories?limit=100')
+      .then(res => { if (mountedRef.current) setCategories(res.data.data ?? []) })
+      .catch(() => {})
+      .finally(() => { if (mountedRef.current) setLoading(false) })
   }
 
   useEffect(() => { fetchCategories() }, [])
@@ -41,8 +47,12 @@ export default function AdminCategories() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Xoá danh mục này?')) return
-    await api.delete(`/admin/categories/${id}`)
-    fetchCategories()
+    try {
+      await api.delete(`/admin/categories/${id}`)
+      fetchCategories()
+    } catch (err: any) {
+      alert(err.response?.data?.message ?? 'Xoá thất bại')
+    }
   }
 
   return (
@@ -122,11 +132,11 @@ export default function AdminCategories() {
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Tên danh mục *</label>
-                <input value={form.name} onChange={(e) => setSlug(e.target.value)} className="input-inset" style={{ fontSize: 13 }} autoFocus />
+                <input value={form.name} onChange={(e) => setSlug(e.target.value)} className="input-inset w-full" style={{ fontSize: 13 }} autoFocus />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Slug *</label>
-                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
+                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} />
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" checked={form.is_visible} onChange={(e) => setForm({ ...form, is_visible: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />

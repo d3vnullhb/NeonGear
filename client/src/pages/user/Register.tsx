@@ -8,20 +8,26 @@ import { facebookLogin, FB_ENABLED } from '../../lib/facebook'
 export default function Register() {
   const { register, loginWithGoogle, loginWithFacebook } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', phone: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', confirm: '', phone: '' })
   const [loading, setLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
+  const PHONE_RE = /^(0|\+84)(3[2-9]|5[25689]|7[06-9]|8[0-9]|9[0-9])\d{7}$/
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (!form.full_name.trim()) { setError('Vui lòng nhập họ tên'); return }
+    if (form.full_name.trim().length < 2) { setError('Họ tên phải có ít nhất 2 ký tự'); return }
     if (!form.email.trim()) { setError('Vui lòng nhập email'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError('Email không hợp lệ'); return }
+    if (form.phone && !PHONE_RE.test(form.phone.trim())) { setError('Số điện thoại không hợp lệ'); return }
     if (!form.password) { setError('Vui lòng nhập mật khẩu'); return }
     if (form.password.length < 8) { setError('Mật khẩu phải có ít nhất 8 ký tự'); return }
+    if (!form.confirm) { setError('Vui lòng xác nhận mật khẩu'); return }
+    if (form.password !== form.confirm) { setError('Mật khẩu xác nhận không khớp'); return }
     setLoading(true)
     try {
       await register(form.full_name, form.email, form.password, form.phone || undefined)
@@ -148,6 +154,11 @@ export default function Register() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Xác nhận mật khẩu</label>
+              <input type={showPassword ? 'text' : 'password'} value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} className="input-inset" placeholder="Nhập lại mật khẩu" />
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-3">

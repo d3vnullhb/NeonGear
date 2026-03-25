@@ -9,12 +9,14 @@ export interface JustAddedInfo {
   price: number | string
   variant_name?: string
   slug: string
+  cartQuantity?: number
 }
 
 interface CartContextType {
   cart: Cart | null
   cartCount: number
   loading: boolean
+  cartError: string | null
   justAdded: JustAddedInfo | null
   fetchCart: () => Promise<void>
   addItem: (variant_id: number, quantity: number, info?: JustAddedInfo) => Promise<void>
@@ -29,6 +31,7 @@ const CartContext = createContext<CartContextType | null>(null)
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(false)
+  const [cartError, setCartError] = useState<string | null>(null)
   const [justAdded, setJustAdded] = useState<JustAddedInfo | null>(null)
   const { isAuthenticated } = useAuth()
 
@@ -36,10 +39,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     if (!isAuthenticated) { setCart(null); return }
     try {
       setLoading(true)
+      setCartError(null)
       const { data } = await api.get('/cart')
       setCart(data.data)
-    } catch {
+    } catch (err: any) {
       setCart(null)
+      // 401 = user not authenticated — normal state, do not show error
+      if (err?.response?.status === 401) {
+        setCartError(null)
+      } else {
+        setCartError('Không thể tải giỏ hàng, vui lòng thử lại')
+      }
     } finally {
       setLoading(false)
     }
@@ -48,32 +58,49 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { fetchCart() }, [isAuthenticated])
 
   const addItem = async (variant_id: number, quantity: number, info?: JustAddedInfo) => {
-    await api.post('/cart/items', { variant_id, quantity })
-    await fetchCart()
-    if (info) setJustAdded(info)
+    try {
+      const { data: res } = await api.post('/cart/items', { variant_id, quantity })
+      const cartQuantity: number = res.data?.quantity ?? quantity
+      await fetchCart()
+      if (info) setJustAdded({ ...info, cartQuantity })
+    } catch (err) {
+      throw err
+    }
   }
 
   const dismissCart = () => setJustAdded(null)
 
   const updateItem = async (id: number, quantity: number) => {
-    await api.put(`/cart/items/${id}`, { quantity })
-    await fetchCart()
+    try {
+      await api.put(`/cart/items/${id}`, { quantity })
+      await fetchCart()
+    } catch (err) {
+      throw err
+    }
   }
 
   const removeItem = async (id: number) => {
-    await api.delete(`/cart/items/${id}`)
-    await fetchCart()
+    try {
+      await api.delete(`/cart/items/${id}`)
+      await fetchCart()
+    } catch (err) {
+      throw err
+    }
   }
 
   const clearCart = async () => {
-    await api.delete('/cart')
-    await fetchCart()
+    try {
+      await api.delete('/cart')
+      await fetchCart()
+    } catch (err) {
+      throw err
+    }
   }
 
   const cartCount = cart?.cart_items.reduce((sum, item) => sum + item.quantity, 0) ?? 0
 
   return (
-    <CartContext.Provider value={{ cart, cartCount, loading, justAdded, fetchCart, addItem, dismissCart, updateItem, removeItem, clearCart }}>
+    <CartContext.Provider value={{ cart, cartCount, loading, cartError, justAdded, fetchCart, addItem, dismissCart, updateItem, removeItem, clearCart }}>
       {children}
     </CartContext.Provider>
   )

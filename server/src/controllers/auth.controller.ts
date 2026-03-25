@@ -164,7 +164,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     }
 
     const resetToken = jwt.sign(
-      { user_id: user.user_id, type: 'reset' },
+      { user_id: user.user_id, type: 'reset', ph: user.password_hash.slice(-10) },
       process.env.JWT_SECRET as string,
       { expiresIn: '15m' } as jwt.SignOptions
     )
@@ -207,6 +207,12 @@ export const resetPassword = async (req: Request, res: Response) => {
     const user = await findUserById(payload.user_id)
     if (!user) {
       res.status(404).json({ success: false, message: 'Người dùng không tồn tại' })
+      return
+    }
+
+    // Invalidate token if password has already been reset (ph fingerprint mismatch)
+    if (payload.ph && user.password_hash.slice(-10) !== payload.ph) {
+      res.status(400).json({ success: false, message: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn' })
       return
     }
 

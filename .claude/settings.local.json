@@ -1,36 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)",
-      "Bash(npm install:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run:*)",
-      "Bash(curl:*)",
-      "Bash(npm create:*)",
-      "Bash(npx prisma:*)",
-      "Bash(node:*)",
-      "Bash(npx tsx:*)",
-      "Bash(netstat:*)",
-      "Bash(sed:*)",
-      "Bash(mkdir:*)",
-      "Bash(cp:*)",
-      "Bash(rm:*)",
-      "Bash(ls not:*)",
-      "Bash(echo \"exit: $?\")",
-      "Read(//c/Users/AD/Downloads/**)",
-      "Bash(cp \"/c/Users/AD/Downloads/payment_method.png\" \"/c/Users/AD/Desktop/neongear/client/public/images/payment-methods.png\")",
-      "Bash(cp \"/c/Users/AD/Downloads/bocongthuong.png\" \"/c/Users/AD/Desktop/neongear/client/public/images/bct-badge.png\")",
-      "Bash(npx dotenv -e .env -- npx tsx -e \":*)",
-      "Bash(node -e \":*)",
-      "Bash(del ng_part1.html ng_part2.html ng_part3.html)",
-      "Bash(where pandoc:*)",
-      "Bash(where soffice:*)",
-      "Bash(PGPASSWORD=123456 psql -h localhost -U postgres -d neongear -c \"SELECT COUNT\\(*\\) as total, COUNT\\(CASE WHEN deleted_at IS NOT NULL THEN 1 END\\) as soft_deleted, COUNT\\(CASE WHEN is_active = false THEN 1 END\\) as inactive FROM products;\")",
-      "Bash(pkill -f \"tsx src/app.ts\")",
-      "Bash(python3 -c \"import docx; print\\(''ok''\\)\")",
-      "Bash(pip install:*)",
-      "Bash(python gen_tables.py)",
-      "Bash(python -c \":*)"
+      "Bash(find /c/Users/AD/Desktop/neongear -name .env* -o -name *.env*)"
     ]
   }
 }

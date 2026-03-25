@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Lock, Truck, Zap, CreditCard, Wallet, Package, Banknote, ShieldCheck, RefreshCw, Tag, Copy, CheckCircle2 } from 'lucide-react'
@@ -119,12 +119,30 @@ export default function Checkout() {
     api.get('/settings/payment').then(r => setBankInfo(r.data.data)).catch(() => {})
   }, [])
 
+  // Cảnh báo khi người dùng thoát trang đang điền form
+  useEffect(() => {
+    const isDirty = addr.address_line !== '' || addr.province_code !== '' || note !== ''
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [addr.address_line, addr.province_code, note])
+
+  // Reset coupon state when user changes (e.g. logout/login)
+  useEffect(() => {
+    setCouponCode('')
+    setCouponInfo(null)
+    setCouponError('')
+  }, [user?.user_id])
+
   const subtotal  = cart?.cart_items.reduce((s, i) => s + Number(i.product_variants?.price ?? 0) * i.quantity, 0) ?? 0
   const discount  = couponInfo?.discount_amount ?? 0
   const shippingFee = calcShippingFee(subtotal, shippingMethod)
   const finalTotal = Math.max(0, subtotal - discount + shippingFee)
 
   const [provApiDown, setProvApiDown] = useState(false)
+  const distAbortRef = useRef<AbortController | null>(null)
+  const wardAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     const CACHE_KEY = 'ng_provinces_cache'
@@ -140,14 +158,16 @@ export default function Checkout() {
         }
       }
     } catch {}
-    fetch(`${PROVINCES_API}/p/`)
+    const ctrl = new AbortController()
+    fetch(`${PROVINCES_API}/p/`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(data => {
         setProvinces(data)
         try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
       })
-      .catch(() => setProvApiDown(true))
+      .catch(err => { if (err.name !== 'AbortError') setProvApiDown(true) })
       .finally(() => setLoadingProv(false))
+    return () => ctrl.abort()
   }, [])
 
   const onProvinceChange = (code: string, name: string) => {
@@ -155,11 +175,13 @@ export default function Checkout() {
     setDistricts([]); setWards([])
     setFieldErrors(e => ({ ...e, province: undefined }))
     if (!code) return
+    distAbortRef.current?.abort()
+    distAbortRef.current = new AbortController()
     setLoadingDist(true)
-    fetch(`${PROVINCES_API}/p/${code}?depth=2`)
+    fetch(`${PROVINCES_API}/p/${code}?depth=2`, { signal: distAbortRef.current.signal })
       .then(r => r.json())
       .then(d => setDistricts(d.districts ?? []))
-      .catch(() => {})
+      .catch(err => { if (err.name !== 'AbortError') {} })
       .finally(() => setLoadingDist(false))
   }
 
@@ -168,11 +190,13 @@ export default function Checkout() {
     setWards([])
     setFieldErrors(e => ({ ...e, district: undefined }))
     if (!code) return
+    wardAbortRef.current?.abort()
+    wardAbortRef.current = new AbortController()
     setLoadingWard(true)
-    fetch(`${PROVINCES_API}/d/${code}?depth=2`)
+    fetch(`${PROVINCES_API}/d/${code}?depth=2`, { signal: wardAbortRef.current.signal })
       .then(r => r.json())
       .then(d => setWards(d.wards ?? []))
-      .catch(() => {})
+      .catch(err => { if (err.name !== 'AbortError') {} })
       .finally(() => setLoadingWard(false))
   }
 
@@ -424,7 +448,7 @@ export default function Checkout() {
 
         {/* ════════════ RIGHT SIDEBAR ════════════ */}
         <aside style={{ width: 380, flexShrink: 0, position: 'sticky', top: 70 }}>
-          <div className="card" style={{ padding: '24px' }}>
+          {cart && <div className="card" style={{ padding: '24px' }}>
 
             {/* Order header */}
             <h3 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 16 }}>
@@ -526,7 +550,7 @@ export default function Checkout() {
             {/* Submit button */}
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || applyingCoupon}
               className="btn-primary w-full"
               style={{ marginTop: 16, padding: '14px', fontSize: 15, fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}
               onClick={handleSubmit}
@@ -555,7 +579,7 @@ export default function Checkout() {
                 <RefreshCw size={14} style={{ color: 'var(--neon-blue)' }} /> Đổi trả 30 ngày
               </div>
             </div>
-          </div>
+          </div>}
         </aside>
       </div>
 

@@ -4,14 +4,12 @@ import {
   getOrderById,
   listUserOrders,
   listAllOrders,
-  updateOrderStatus,
   deleteOrder,
   getOrderStatus,
   listOrderStatuses,
   getRevenueStats,
 } from '../models/order.model'
-import { getCartWithItems, clearCart } from '../models/cart.model'
-import { adjustInventory, addInventoryTransaction } from '../models/inventory.model'
+import { getCartWithItems } from '../models/cart.model'
 import { randomBytes } from 'crypto'
 import { getCouponByCode, getCouponUsageByUser } from '../models/coupon.model'
 import { findUserById } from '../models/auth.model'
@@ -67,12 +65,19 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       return
     }
 
-    // Validate inventory (use Number() to handle Prisma Decimal type from PrismaPg adapter)
-    for (const item of cart.cart_items) {
+    // Filter out cart items whose variant has been soft-deleted
+    const activeItems = cart.cart_items.filter((item) => item.product_variants && !item.product_variants.deleted_at)
+    if (!activeItems.length) {
+      res.status(400).json({ success: false, message: 'Tất cả sản phẩm trong giỏ hàng không còn tồn tại' })
+      return
+    }
+
+    // Validate inventory
+    for (const item of activeItems) {
       const inv = item.product_variants?.inventory
       const currentQty = Number(inv?.quantity ?? 0)
       if (currentQty < item.quantity) {
-        res.status(400).json({ success: false, message: `Sản phẩm "${item.product_variants?.products?.name}" không đủ hàng (còn ${currentQty} | yêu cầu ${item.quantity})` })
+        res.status(400).json({ success: false, message: `Sản phẩm "${item.product_variants?.products?.name}" không đủ hàng (còn ${currentQty})` })
         return
       }
     }
@@ -83,16 +88,17 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       return
     }
 
-    // Calculate amounts
-    const total_amount = cart.cart_items.reduce((sum, item) => {
+    // Calculate amounts (only active items)
+    const total_amount = activeItems.reduce((sum, item) => {
       return sum + Number(item.product_variants?.price ?? 0) * item.quantity
     }, 0)
 
     let discount_amount = 0
     let coupon_id: number | undefined
+    let coupon: Awaited<ReturnType<typeof getCouponByCode>> | null = null
 
     if (coupon_code) {
-      const coupon = await getCouponByCode(coupon_code)
+      coupon = await getCouponByCode(coupon_code)
       if (!coupon || !coupon.is_active) {
         res.status(400).json({ success: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn' })
         return
@@ -116,7 +122,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
       }
       coupon_id = coupon.coupon_id
       if (coupon.discount_type === 'percent') {
-        discount_amount = (total_amount * Number(coupon.discount_value)) / 100
+        discount_amount = Math.round((total_amount * Number(coupon.discount_value)) / 100)
         if (coupon.max_discount_amount) discount_amount = Math.min(discount_amount, Number(coupon.max_discount_amount))
       } else {
         discount_amount = Number(coupon.discount_value ?? 0)
@@ -126,7 +132,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
     const shipping_fee = shipping_method === 'express' ? 50000 : total_amount >= 500000 ? 0 : 30000
     const final_amount = Math.max(0, total_amount - discount_amount + shipping_fee)
 
-    const items = cart.cart_items.map((item) => ({
+    const items = activeItems.map((item) => ({
       variant_id: item.variant_id!,
       quantity: item.quantity,
       price: Number(item.product_variants?.price ?? 0),
@@ -137,7 +143,7 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
     const order = await prisma.$transaction(async (tx) => {
       // Deduct inventory atomically — if any item runs out, entire transaction rolls back
-      for (const item of cart.cart_items) {
+      for (const item of activeItems) {
         const delta = -item.quantity
         const updated = await tx.$executeRaw`
           UPDATE inventory
@@ -145,7 +151,8 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
           WHERE variant_id = ${item.variant_id!} AND quantity + ${delta} >= 0
         `
         if (updated === 0) {
-          throw new Error(`Sản phẩm "${item.product_variants?.products?.name}" không đủ tồn kho`)
+          const cur = await tx.inventory.findUnique({ where: { variant_id: item.variant_id! }, select: { quantity: true } })
+          throw new Error(`Sản phẩm "${item.product_variants?.products?.name}" không đủ hàng (còn ${cur?.quantity ?? 0} | yêu cầu ${item.quantity})`)
         }
       }
 
@@ -172,24 +179,33 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
 
       // Log inventory transactions
       await Promise.all(
-        cart.cart_items.map((item) =>
+        activeItems.map((item) =>
           tx.inventory_transactions.create({
             data: { variant_id: item.variant_id!, change_quantity: -item.quantity, transaction_type: 'export', reference_id: newOrder.order_id, note: `Đơn hàng ${newOrder.order_code}` },
           })
         )
       )
 
-      // Record coupon usage
-      if (coupon_id) {
+      // Record coupon usage — re-check per-user limit inside transaction to prevent race conditions
+      if (coupon_id && coupon) {
+        const currentUsage = await tx.coupon_usages.count({ where: { user_id: req.user!.user_id, coupon_id } })
+        if (coupon.per_user_limit && currentUsage >= coupon.per_user_limit) {
+          throw new Error('Mã giảm giá đã hết lượt sử dụng')
+        }
         await tx.coupon_usages.create({ data: { user_id: req.user!.user_id, coupon_id, order_id: newOrder.order_id } })
-        await tx.coupons.update({ where: { coupon_id }, data: { used_count: { increment: 1 } } })
+        // Atomic increment với điều kiện — tránh race condition khi nhiều đơn đặt đồng thời
+        const couponUpdated = await tx.$executeRaw`
+          UPDATE coupons SET used_count = used_count + 1
+          WHERE coupon_id = ${coupon_id} AND (usage_limit IS NULL OR used_count < usage_limit)
+        `
+        if (couponUpdated === 0) throw new Error('Mã giảm giá đã hết lượt sử dụng')
       }
+
+      // Clear cart trong transaction để đảm bảo tính nhất quán dữ liệu
+      await tx.cart_items.deleteMany({ where: { cart_id: cart.cart_id } })
 
       return newOrder
     })
-
-    // Clear cart — outside transaction, non-critical
-    await clearCart(cart.cart_id)
 
     // Send confirmation email — fire and forget
     ;(async () => {
@@ -215,8 +231,8 @@ export const placeOrder = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[placeOrder]', msg)
-    // Expose only known business errors (inventory), not raw DB errors
-    const isBusinessError = msg.includes('không đủ tồn kho')
+    // Expose only known business errors (inventory, coupon), not raw DB errors
+    const isBusinessError = msg.includes('không đủ tồn kho') || msg.includes('không đủ hàng') || msg.includes('Mã giảm giá')
     res.status(isBusinessError ? 400 : 500).json({
       success: false,
       message: isBusinessError ? msg : 'Đặt hàng thất bại, vui lòng thử lại',
@@ -247,12 +263,21 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
       return
     }
     await prisma.$transaction(async (tx) => {
+      // Re-fetch order inside transaction to guard against race conditions (double-cancel or concurrent status change)
+      const freshOrder = await tx.orders.findUnique({
+        where: { order_id },
+        include: { order_status: true, order_details: true },
+      })
+      if (!freshOrder || freshOrder.order_status?.name !== 'pending') {
+        throw new Error('Chỉ có thể huỷ đơn hàng ở trạng thái chờ xử lý')
+      }
+
       // Update order status + history atomically
       await tx.orders.update({ where: { order_id }, data: { status_id: cancelledStatus.status_id } })
       await tx.order_status_history.create({ data: { order_id, status_id: cancelledStatus.status_id, note: 'Huỷ bởi khách hàng' } })
 
       // Restore inventory for all items atomically — if any fails, all roll back
-      for (const detail of order.order_details) {
+      for (const detail of freshOrder.order_details) {
         if (!detail.variant_id) continue
         await tx.$executeRaw`
           UPDATE inventory SET quantity = quantity + ${detail.quantity}, updated_at = NOW()
@@ -266,7 +291,9 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 
     res.json({ success: true, message: 'Huỷ đơn hàng thành công' })
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Lỗi server', errors: [error instanceof Error ? error.message : String(error)] })
+    const msg = error instanceof Error ? error.message : String(error)
+    const isBusinessError = msg.includes('Chỉ có thể huỷ')
+    res.status(isBusinessError ? 400 : 500).json({ success: false, message: isBusinessError ? msg : 'Lỗi server', errors: isBusinessError ? undefined : [msg] })
   }
 }
 
@@ -306,6 +333,17 @@ export const adminListOrders = async (req: AuthRequest, res: Response) => {
   }
 }
 
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  pending:     ['confirmed', 'cancelled'],
+  confirmed:   ['shipping', 'cancelled'],
+  shipping:    ['delivered', 'cancelled'],
+  delivered:   [],
+  cancelled:   [],
+  failed:      [],
+  paid:        ['confirmed', 'cancelled'],
+  pending_cod: ['confirmed', 'cancelled'],
+}
+
 export const adminUpdateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     const order_id = parseInt(req.params.id as string)
@@ -328,6 +366,14 @@ export const adminUpdateOrderStatus = async (req: AuthRequest, res: Response) =>
     // Idempotency: skip if already in target status
     if (order.status_id === parseInt(status_id)) {
       res.json({ success: true, message: 'Trạng thái đơn hàng không thay đổi' })
+      return
+    }
+
+    // Validate status transition
+    const currentStatusName = order.order_status?.name ?? ''
+    const allowedNext = ALLOWED_TRANSITIONS[currentStatusName]
+    if (allowedNext !== undefined && !allowedNext.includes(newStatusName)) {
+      res.status(400).json({ success: false, message: `Không thể chuyển từ trạng thái "${currentStatusName}" sang "${newStatusName}"` })
       return
     }
 

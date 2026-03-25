@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Ticket } from 'lucide-react'
+import { Plus, Trash2, Edit, Ticket } from 'lucide-react'
 import api from '../../lib/api'
 import Spinner from '../../components/Spinner'
+
+const emptyForm = { code: '', discount_type: 'percent', discount_value: '', min_order_amount: '', max_discount_amount: '', expiry_date: '', usage_limit: '', per_user_limit: '', is_active: true }
 
 export default function AdminCoupons() {
   const [coupons, setCoupons] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ code: '', discount_type: 'percent', discount_value: '', min_order_amount: '', max_discount_amount: '', expiry_date: '', usage_limit: '', is_active: true })
+  const [modal, setModal] = useState<'create' | 'edit' | null>(null)
+  const [editing, setEditing] = useState<any>(null)
+  const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
 
   const fetchCoupons = () => {
@@ -15,13 +18,44 @@ export default function AdminCoupons() {
     api.get('/admin/coupons?limit=100').then((res) => setCoupons(res.data.data ?? [])).finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchCoupons() }, [])
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    api.get('/admin/coupons?limit=100')
+      .then(res => { if (mounted) setCoupons(res.data.data ?? []) })
+      .catch(() => {})
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [])
+
+  const openCreate = () => {
+    setEditing(null)
+    setForm({ ...emptyForm })
+    setModal('create')
+  }
+
+  const openEdit = (c: any) => {
+    setEditing(c)
+    setForm({
+      code: c.code,
+      discount_type: c.discount_type,
+      discount_value: String(c.discount_value),
+      min_order_amount: c.min_order_amount ? String(c.min_order_amount) : '',
+      max_discount_amount: c.max_discount_amount ? String(c.max_discount_amount) : '',
+      expiry_date: c.expiry_date ? new Date(c.expiry_date).toISOString().split('T')[0] : '',
+      usage_limit: c.usage_limit ? String(c.usage_limit) : '',
+      per_user_limit: c.per_user_limit ? String(c.per_user_limit) : '',
+      is_active: c.is_active,
+    })
+    setModal('edit')
+  }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await api.post('/admin/coupons', form)
-      setModal(false); fetchCoupons()
+      if (modal === 'create') await api.post('/admin/coupons', form)
+      else await api.put(`/admin/coupons/${editing.coupon_id}`, form)
+      setModal(null); fetchCoupons()
     } catch (err: any) {
       alert(err.response?.data?.message ?? 'Thất bại')
     } finally {
@@ -31,13 +65,12 @@ export default function AdminCoupons() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Xoá coupon?')) return
-    await api.delete(`/admin/coupons/${id}`)
-    fetchCoupons()
-  }
-
-  const openModal = () => {
-    setForm({ code: '', discount_type: 'percent', discount_value: '', min_order_amount: '', max_discount_amount: '', expiry_date: '', usage_limit: '', is_active: true })
-    setModal(true)
+    try {
+      await api.delete(`/admin/coupons/${id}`)
+      fetchCoupons()
+    } catch (err: any) {
+      alert(err.response?.data?.message ?? 'Xoá thất bại')
+    }
   }
 
   return (
@@ -47,7 +80,7 @@ export default function AdminCoupons() {
           <h1 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'Space Grotesk' }}>Coupon</h1>
           <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>Tạo và quản lý mã giảm giá</p>
         </div>
-        <button onClick={openModal} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13 }}>
+        <button onClick={openCreate} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13 }}>
           <Plus size={15} /> Tạo coupon
         </button>
       </div>
@@ -96,11 +129,14 @@ export default function AdminCoupons() {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ fontSize: 11.5, padding: '3px 8px', borderRadius: 20, fontWeight: 600, background: c.is_active ? 'rgba(0,255,157,0.1)' : 'rgba(255,77,106,0.1)', color: c.is_active ? 'var(--success)' : 'var(--error)', border: `1px solid ${c.is_active ? 'rgba(0,255,157,0.25)' : 'rgba(255,77,106,0.25)'}` }}>
-                        {c.is_active ? 'Active' : 'Inactive'}
+                        {c.is_active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button onClick={() => handleDelete(c.coupon_id)} title="Xoá" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEdit(c)} title="Sửa" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(0,180,255,0.1)', border: '1px solid rgba(0,180,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--neon-blue)', cursor: 'pointer' }}><Edit size={13} /></button>
+                        <button onClick={() => handleDelete(c.coupon_id)} title="Xoá" style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(255,77,106,0.1)', border: '1px solid rgba(255,77,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -114,45 +150,49 @@ export default function AdminCoupons() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
           <div className="card" style={{ padding: 0, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
-              <h2 style={{ fontWeight: 700, fontSize: 16, fontFamily: 'Space Grotesk' }}>Tạo coupon mới</h2>
+              <h2 style={{ fontWeight: 700, fontSize: 16, fontFamily: 'Space Grotesk' }}>{modal === 'create' ? 'Tạo coupon mới' : 'Chỉnh sửa coupon'}</h2>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Mã coupon *</label>
-                <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className="input-inset" style={{ fontSize: 13, fontFamily: 'monospace', letterSpacing: '0.05em' }} placeholder="SUMMER2026" autoFocus />
+                <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} className="input-inset w-full" style={{ fontSize: 13, fontFamily: 'monospace', letterSpacing: '0.05em' }} placeholder="SUMMER2026" autoFocus />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Loại giảm giá</label>
-                  <select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="input-inset" style={{ fontSize: 13 }}>
+                  <select value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }}>
                     <option value="percent">Phần trăm (%)</option>
                     <option value="fixed">Cố định (₫)</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Giá trị *</label>
-                  <input type="number" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder={form.discount_type === 'percent' ? '10' : '50000'} />
+                  <input type="number" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} placeholder={form.discount_type === 'percent' ? '10' : '50000'} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Đơn tối thiểu (₫)</label>
-                  <input type="number" value={form.min_order_amount} onChange={(e) => setForm({ ...form, min_order_amount: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="200000" />
+                  <input type="number" value={form.min_order_amount} onChange={(e) => setForm({ ...form, min_order_amount: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} placeholder="200000" />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Giảm tối đa (₫)</label>
-                  <input type="number" value={form.max_discount_amount} onChange={(e) => setForm({ ...form, max_discount_amount: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="100000" />
+                  <input type="number" value={form.max_discount_amount} onChange={(e) => setForm({ ...form, max_discount_amount: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} placeholder="100000" />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Ngày hết hạn</label>
-                  <input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} className="input-inset" style={{ fontSize: 13 }} />
+                  <input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Giới hạn sử dụng</label>
-                  <input type="number" value={form.usage_limit} onChange={(e) => setForm({ ...form, usage_limit: e.target.value })} className="input-inset" style={{ fontSize: 13 }} placeholder="Không giới hạn" />
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Giới hạn tổng lượt</label>
+                  <input type="number" value={form.usage_limit} onChange={(e) => setForm({ ...form, usage_limit: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} placeholder="Không giới hạn" />
                 </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Giới hạn lượt / người dùng</label>
+                <input type="number" value={form.per_user_limit} onChange={(e) => setForm({ ...form, per_user_limit: e.target.value })} className="input-inset w-full" style={{ fontSize: 13 }} placeholder="Không giới hạn" />
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} style={{ accentColor: 'var(--neon-blue)', width: 15, height: 15 }} />
@@ -160,8 +200,8 @@ export default function AdminCoupons() {
               </label>
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
-              <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ flex: 1, padding: '10px', fontSize: 13 }}>{saving ? 'Đang tạo...' : 'Tạo coupon'}</button>
-              <button onClick={() => setModal(false)} className="btn-ghost" style={{ flex: 1, padding: '10px', fontSize: 13 }}>Huỷ</button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ flex: 1, padding: '10px', fontSize: 13 }}>{saving ? 'Đang lưu...' : modal === 'create' ? 'Tạo coupon' : 'Lưu thay đổi'}</button>
+              <button onClick={() => setModal(null)} className="btn-ghost" style={{ flex: 1, padding: '10px', fontSize: 13 }}>Huỷ</button>
             </div>
           </div>
         </div>

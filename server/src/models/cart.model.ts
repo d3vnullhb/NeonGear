@@ -11,6 +11,12 @@ export const getCartWithItems = (user_id: number) =>
     where: { user_id },
     include: {
       cart_items: {
+        where: {
+          product_variants: {
+            deleted_at: null,
+            products: { deleted_at: null },
+          },
+        },
         include: {
           product_variants: {
             select: {

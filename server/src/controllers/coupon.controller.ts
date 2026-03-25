@@ -32,8 +32,9 @@ export const validateCoupon = async (req: AuthRequest, res: Response) => {
       res.status(400).json({ success: false, message: 'Mã giảm giá đã hết lượt sử dụng' })
       return
     }
-    if (order_amount && coupon.min_order_amount && parseFloat(order_amount) < Number(coupon.min_order_amount)) {
-      res.status(400).json({ success: false, message: `Đơn hàng tối thiểu ${coupon.min_order_amount}` })
+    const orderAmt = Number(order_amount)
+    if (coupon.min_order_amount && (isNaN(orderAmt) || orderAmt < Number(coupon.min_order_amount))) {
+      res.status(400).json({ success: false, message: `Đơn hàng tối thiểu ${Number(coupon.min_order_amount).toLocaleString('vi-VN')}₫` })
       return
     }
     const usedCount = await getCouponUsageByUser(req.user!.user_id, coupon.coupon_id)

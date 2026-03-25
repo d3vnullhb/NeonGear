@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../lib/api'
 import { Camera } from 'lucide-react'
@@ -24,6 +24,7 @@ export default function Profile() {
   const [fieldErrors, setFieldErrors] = useState<{ full_name?: string; phone?: string }>({})
   const [pwMsg, setPwMsg] = useState('')
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   // DOB
   const [dobYear,  setDobYear]  = useState('')
@@ -191,9 +192,11 @@ export default function Profile() {
     try {
       const { data } = await api.post('/users/me/avatar', fd)
       updateUser(data.data)
-      setMsg('')
+      setMsg('Cập nhật ảnh đại diện thành công!')
     } finally {
       setAvatarLoading(false)
+      // Reset input so selecting the same file again triggers onChange
+      if (avatarInputRef.current) avatarInputRef.current.value = ''
     }
   }
 
@@ -209,7 +212,7 @@ export default function Profile() {
             : <div className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold" style={{ background: 'var(--surface-raised)' }}>{user?.full_name[0]}</div>}
           <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer" style={{ background: 'var(--neon-blue)', color: '#000' }}>
             <Camera size={14} />
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
           </label>
         </div>
         <div>

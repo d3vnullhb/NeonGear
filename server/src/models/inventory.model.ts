@@ -1,7 +1,9 @@
 import prisma from '../config/db'
 
 export const getInventoryByVariant = (variant_id: number) =>
-  prisma.inventory.findUnique({ where: { variant_id } })
+  prisma.inventory.findFirst({
+    where: { variant_id, product_variants: { deleted_at: null } },
+  })
 
 export const upsertInventory = (variant_id: number, quantity: number) =>
   prisma.inventory.upsert({
@@ -42,9 +44,11 @@ export const addInventoryTransaction = (data: {
   note?: string
 }) => prisma.inventory_transactions.create({ data })
 
-export const listInventory = (page: number, limit: number) =>
-  Promise.all([
+export const listInventory = (page: number, limit: number) => {
+  const where = { product_variants: { deleted_at: null, products: { deleted_at: null } } }
+  return Promise.all([
     prisma.inventory.findMany({
+      where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { updated_at: 'desc' },
@@ -54,8 +58,9 @@ export const listInventory = (page: number, limit: number) =>
         },
       },
     }),
-    prisma.inventory.count(),
+    prisma.inventory.count({ where }),
   ])
+}
 
 export const listInventoryTransactions = (variant_id: number, page: number, limit: number) =>
   prisma.inventory_transactions.findMany({

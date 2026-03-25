@@ -1,21 +1,23 @@
 import crypto from 'crypto'
 import { PaymentResult } from './payment.types'
 
-const VNPAY = {
-  vnp_TmnCode:    process.env.VNPAY_TMN_CODE    as string,
-  vnp_HashSecret: process.env.VNPAY_HASH_SECRET as string,
-  vnp_Url:        process.env.VNPAY_URL         as string,
-  vnp_Version:    '2.1.0',
-  vnp_Command:    'pay',
-  vnp_CurrCode:   'VND',
-  vnp_Locale:     'vn',
-  vnp_ReturnUrl:  process.env.SERVER_URL
-    ? `${process.env.SERVER_URL}/api/payment/vnpay/return`
-    : 'http://localhost:3000/api/payment/vnpay/return',
+function getVNPAY() {
+  return {
+    vnp_TmnCode:    process.env.VNPAY_TMN_CODE    as string,
+    vnp_HashSecret: process.env.VNPAY_HASH_SECRET as string,
+    vnp_Url:        process.env.VNPAY_URL         as string,
+    vnp_Version:    '2.1.0',
+    vnp_Command:    'pay',
+    vnp_CurrCode:   'VND',
+    vnp_Locale:     'vn',
+    vnp_ReturnUrl:  process.env.SERVER_URL
+      ? `${process.env.SERVER_URL}/api/payment/vnpay/return`
+      : 'http://localhost:3000/api/payment/vnpay/return',
+  }
 }
 
-function hmac512(data: string): string {
-  return crypto.createHmac('sha512', VNPAY.vnp_HashSecret).update(data).digest('hex')
+function hmac512(data: string, secret: string): string {
+  return crypto.createHmac('sha512', secret).update(Buffer.from(data, 'utf-8')).digest('hex')
 }
 
 function sortObject(obj: Record<string, any>): Record<string, any> {
@@ -79,6 +81,7 @@ export function createVNPayPayment(
     pad(now.getSeconds()),
   ].join('')
 
+  const VNPAY = getVNPAY()
   const txnRef = buildVnpayTxnRef(orderId)
 
   const vnp_Params: Record<string, any> = {
@@ -98,7 +101,7 @@ export function createVNPayPayment(
 
   const sorted = sortObject(vnp_Params)
   const signData = toUnsignedQueryString(sorted)
-  const signature = hmac512(signData)
+  const signature = hmac512(signData, VNPAY.vnp_HashSecret)
 
   sorted.vnp_SecureHash = signature
   const redirectUrl = `${VNPAY.vnp_Url}?${toQueryString(sorted)}`
@@ -114,8 +117,13 @@ export function createVNPayPayment(
 /** Verify signature from VNPay return / IPN */
 export function verifyVNPaySignature(query: Record<string, string>): boolean {
   const { vnp_SecureHash, vnp_SecureHashType, ...params } = query
-  const sorted = sortObject(params)
+  const VNPAY = getVNPAY()
+  // VNPay spec: exclude empty-valued params before computing signature
+  const filtered = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== '' && v != null),
+  )
+  const sorted = sortObject(filtered)
   const signData = toUnsignedQueryString(sorted)
-  const expected = hmac512(signData)
+  const expected = hmac512(signData, VNPAY.vnp_HashSecret)
   return expected === vnp_SecureHash
 }

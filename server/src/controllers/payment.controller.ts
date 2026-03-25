@@ -131,10 +131,13 @@ export const momoIPN = async (req: Request, res: Response) => {
     }
 
     const resultCode = parseInt(body.resultCode)
-    const statusName = resultCode === 0 ? 'paid' : 'failed'
-    const status = await resolveStatus(statusName)
 
-    await updateOrderStatus(orderId, status.status_id, `MoMo IPN — resultCode: ${resultCode}`)
+    if (resultCode === 0) {
+      const status = await resolveStatus('paid')
+      await updateOrderStatus(orderId, status.status_id, `MoMo IPN — resultCode: ${resultCode}`)
+    } else {
+      await handlePaymentFailure(orderId, `MoMo IPN — resultCode: ${resultCode}`)
+    }
 
     // MoMo expects HTTP 204 or 200 to confirm receipt
     res.status(204).send()

@@ -131,7 +131,8 @@ export default function OrderDetail() {
   const updateForm = (productId: number, patch: Partial<ReviewForm>) =>
     setForms(prev => ({ ...prev, [productId]: { ...prev[productId], ...patch } }))
 
-  const submitReview = async (productId: number, orderId: number) => {
+  const submitReview = async (productId: number | undefined, orderId: number) => {
+    if (!productId) return
     const form = forms[productId]
     if (!form || form.rating < 1) { updateForm(productId, { error: 'Vui lòng chọn số sao' }); return }
     updateForm(productId, { submitting: true, error: '' })
